@@ -26,6 +26,7 @@ import {
   RotateCw,
   SlidersHorizontal,
   Square,
+  Upload,
   X,
 } from "lucide-react";
 import { ClayScene } from "./ClayScene";
@@ -41,11 +42,12 @@ import {
   PRESETS,
   SEGMENTS,
   TOTAL_STEPS,
-  createDeposit,
   isPottery,
   meanSettings,
-} from "./simulation";
-import type { Deposit, Pottery, Settings } from "./simulation";
+} from "./pottery";
+import type { Pottery, Settings } from "./pottery";
+import { MaterialSimulation, MATERIAL_TICKS } from "./materialSimulation";
+import { createArchive, MAX_ARCHIVE_BYTES, parseArchive } from "./archive";
 
 type Status = PrintStatus;
 type Page = "studio" | "gallery";
@@ -303,16 +305,20 @@ export default function App() {
   const sceneRef = useRef<SceneHandle>(null);
   const detailRef = useRef<SceneHandle>(null);
   const studioRef = useRef<HTMLDivElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+  const profileRef = useRef(new URLSearchParams(location.search).has("profile"));
   const settingsRef = useRef(settings);
   const runRef = useRef<{
     pottery: Pottery;
-    deposits: Deposit[];
+    engine: MaterialSimulation;
     elapsed: number;
   } | null>(null);
   const allWorks = [...collection, ...PRESETS];
   const currentPottery = runRef.current?.pottery ?? PRESETS[0];
-  const currentLayer = Math.min(LAYERS, Math.floor(progress * LAYERS));
+  const currentLayer = runRef.current ? Math.min(LAYERS, Math.ceil(currentPottery.steps / SEGMENTS)) : 0;
   const isActive = status === "printing" || status === "paused";
+  const finishing = !!runRef.current && runRef.current.engine.tick >= runRef.current.engine.stopStep;
+  const controlsLocked = status === "complete" || finishing;
 
   const notify = (message: string) => setNotice(message);
   function closeGuide() {
@@ -377,23 +383,25 @@ export default function App() {
       const delta = Math.min((now - previous) / 1000, 0.15);
       previous = now;
       if (!document.hidden) run.elapsed += delta;
-      const steps = Math.min(
-        TOTAL_STEPS,
-        Math.floor((run.elapsed / DURATION) * TOTAL_STEPS),
-      );
-      const start = run.deposits.length;
-      for (let i = start; i < steps; i++)
-        run.deposits.push(
-          createDeposit(i, settingsRef.current, run.pottery.seed, run.deposits),
-        );
-      if (steps > start) sceneRef.current?.append(run.deposits, start);
-      run.pottery.steps = steps;
-      run.pottery.duration = Math.min(DURATION, run.elapsed);
-      if (now - uiTime > 70 || steps === TOTAL_STEPS) {
-        setProgress(steps / TOTAL_STEPS);
+      const engine = run.engine;
+      const started = profileRef.current ? performance.now() : 0;
+      engine.advanceTo(Math.floor(run.elapsed / DURATION * MATERIAL_TICKS), run.pottery.events);
+      const simulated = profileRef.current ? performance.now() : 0;
+      sceneRef.current?.append(engine.deposits, engine.dirtyStart, engine.nozzle);
+      if (profileRef.current) {
+        const end = performance.now();
+        performance.measure("pottery:simulation", { start: started, end: simulated });
+        performance.measure("pottery:geometry", { start: simulated, end });
+        performance.measure("pottery:deposition", { start: started, end });
+      }
+      run.pottery.steps = engine.deposits.length;
+      run.pottery.simulation = engine.record();
+      run.pottery.duration = engine.tick / MATERIAL_TICKS * DURATION;
+      if (now - uiTime > 70 || engine.complete) {
+        setProgress(engine.tick / MATERIAL_TICKS);
         uiTime = now;
       }
-      if (steps === TOTAL_STEPS) {
+      if (engine.complete) {
         setStatus("complete");
         notify("打印完成");
       } else frame = requestAnimationFrame(tick);
@@ -403,6 +411,7 @@ export default function App() {
   }, [status]);
 
   function updateSettings(next: Settings, startWhenReady = false) {
+    if (controlsLocked) return;
     settingsRef.current = next;
     setSettings(next);
     if (status === "ready" && startWhenReady) {
@@ -411,7 +420,8 @@ export default function App() {
     }
     const run = runRef.current;
     if (run && (status === "printing" || status === "paused")) {
-      const event = { step: run.deposits.length, ...next };
+      if (run.engine.tick >= run.engine.stopStep) return;
+      const event = { step: run.engine.tick, ...next };
       const last = run.pottery.events.at(-1);
       if (last?.step === event.step)
         run.pottery.events[run.pottery.events.length - 1] = event;
@@ -421,6 +431,7 @@ export default function App() {
 
   function startPrint() {
     const seed = Math.floor(Math.random() * 100000);
+    const engine = new MaterialSimulation(seed);
     const pottery: Pottery = {
       id:
         typeof crypto.randomUUID === "function"
@@ -432,8 +443,9 @@ export default function App() {
       events: [{ step: 0, ...settingsRef.current }],
       createdAt: new Date().toISOString(),
       duration: 0,
+      simulation: engine.record(),
     };
-    runRef.current = { pottery, deposits: [], elapsed: 0 };
+    runRef.current = { pottery, engine, elapsed: 0 };
     setProgress(0);
     setSavedId(null);
     setAutoRotate(false);
@@ -442,8 +454,16 @@ export default function App() {
     setStatus("printing");
   }
 
+  function finishPrint() {
+    const run = runRef.current;
+    if (!run) return;
+    run.engine.stop();
+    run.pottery.simulation = run.engine.record();
+    setStatus("printing");
+  }
+
   function applyGesture(update: GestureUpdate) {
-    if (status === "complete") return;
+    if (status === "complete" || (runRef.current && runRef.current.engine.tick >= runRef.current.engine.stopStep)) return;
     if (Object.keys(update.values).length)
       updateSettings({ ...settingsRef.current, ...update.values });
     if (update.command === "run") {
@@ -466,6 +486,7 @@ export default function App() {
     const next = [pottery, ...collection.filter((p) => p.id !== pottery.id)];
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      run.pottery = pottery;
       setCollection(next);
       setSavedId(pottery.id);
       setNameOpen(false);
@@ -476,23 +497,33 @@ export default function App() {
   }
 
   function exportWork(pottery: Pottery) {
-    const data = {
-      format: "uncontrolled-pottery",
-      version: 1,
-      shape: "cylinder",
-      simulation: {
-        layers: LAYERS,
-        segmentsPerLayer: SEGMENTS,
-        durationSeconds: DURATION,
-        model: "material-inspired-approximation",
-      },
-      pottery,
-    };
+    const data = createArchive(pottery);
     download(
       new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
       `${pottery.title}-过程.json`,
     );
     notify("作品与参数记录已导出");
+  }
+
+  async function importWork(file: File) {
+    try {
+      if (file.size > MAX_ARCHIVE_BYTES) throw new Error("Archive too large");
+      const pottery = parseArchive(await file.text());
+      const existing = collection.find((work) => work.id === pottery.id);
+      if (existing) {
+        setSelected(existing);
+        notify("作品已在收藏中");
+        return;
+      }
+      const next = [pottery, ...collection];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setCollection(next);
+      setGalleryFilter("mine");
+      setSelected(pottery);
+      notify("作品已导入");
+    } catch {
+      notify("无法导入，请检查记录版本与收藏空间");
+    }
   }
 
   function download(blob: Blob, filename: string) {
@@ -506,7 +537,10 @@ export default function App() {
 
   function exportImage() {
     const data = detailRef.current?.capture();
-    if (!data) return;
+    if (!data) {
+      notify("作品正在重建");
+      return;
+    }
     const a = document.createElement("a");
     a.href = data;
     a.download = `${selected?.title ?? "陶器"}.webp`;
@@ -630,6 +664,7 @@ export default function App() {
                 <ClayScene
                   ref={sceneRef}
                   initial={currentPottery}
+                  initialNozzle={runRef.current?.engine.nozzle}
                   planned={planned}
                   autoRotate={autoRotate}
                   printing={isActive}
@@ -642,7 +677,7 @@ export default function App() {
                       {status === "ready"
                         ? "预览"
                         : status === "printing"
-                          ? "正在沉积"
+                          ? finishing ? "正在收尾" : "正在沉积"
                           : status === "paused"
                             ? "打印已暂停"
                             : "打印完成"}
@@ -743,7 +778,7 @@ export default function App() {
                   label="供料波动"
                   value={settings.fluctuation}
                   kind="wave"
-                  disabled={gestureEnabled}
+                  disabled={gestureEnabled || controlsLocked}
                   onChange={(value) =>
                     updateSettings({ ...settings, fluctuation: value }, true)
                   }
@@ -752,7 +787,7 @@ export default function App() {
                   label="供料中断"
                   value={settings.interruption}
                   kind="break"
-                  disabled={gestureEnabled}
+                  disabled={gestureEnabled || controlsLocked}
                   onChange={(value) =>
                     updateSettings({ ...settings, interruption: value }, true)
                   }
@@ -766,6 +801,7 @@ export default function App() {
                     role="switch"
                     aria-checked={settings.sag}
                     aria-label="局部下垂"
+                    disabled={controlsLocked}
                     onClick={() =>
                       updateSettings({ ...settings, sag: !settings.sag })
                     }
@@ -778,6 +814,7 @@ export default function App() {
                     onClick={() => updateSettings(DEFAULT_SETTINGS)}
                     title="恢复默认参数"
                     aria-label="恢复默认参数"
+                    disabled={controlsLocked}
                   >
                     <RotateCcw size={13} />
                   </button>
@@ -832,7 +869,7 @@ export default function App() {
                     {status !== "ready" && (
                       <button
                         onClick={() => {
-                          if (isActive) setStatus("complete");
+                          if (isActive) finishPrint();
                           else startPrint();
                         }}
                       >
@@ -985,6 +1022,21 @@ export default function App() {
                   我的收藏 <span>{collection.length}</span>
                 </button>
               </div>
+              <IconButton label="导入作品记录" onClick={() => importRef.current?.click()}>
+                <Upload size={18} />
+              </IconButton>
+              <input
+                ref={importRef}
+                type="file"
+                accept=".json,application/json"
+                aria-label="作品记录文件"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void importWork(file);
+                }}
+              />
             </div>
             {galleryFilter === "mine" && !collection.length ? (
               <div className="empty-collection">

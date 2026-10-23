@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TOTAL_STEPS, PRESETS as LEGACY_PRESETS, generateDeposits as legacyDeposits } from "../src/simulation.ts";
+import { LAYER_HEIGHT, SEGMENTS, TOTAL_STEPS, PRESETS as LEGACY_PRESETS, generateDeposits as legacyDeposits } from "../src/simulation.ts";
 import { MaterialSimulation, MATERIAL_TICKS, RUNOUT_STEPS, plannedNozzle } from "../src/materialSimulation.ts";
 import { DEFAULT_SETTINGS, PRESETS, generateDeposits, isPottery } from "../src/pottery.ts";
 
@@ -11,6 +11,12 @@ function run(events, seed = 19, end = MATERIAL_TICKS, batches = [end]) {
 }
 
 const stableEvents = [{ step: 0, ...DEFAULT_SETTINGS }];
+
+test("the helical toolpath rises continuously across the first and subsequent turns", () => {
+  for (const step of [0, SEGMENTS - 1, SEGMENTS, SEGMENTS * 2 - 1]) {
+    assert.ok(Math.abs(plannedNozzle(step + 1).y - plannedNozzle(step).y - LAYER_HEIGHT / SEGMENTS) < 1e-12);
+  }
+});
 
 test("zero perturbation follows a fixed toolpath and produces compressed, continuous clay", () => {
   const simulation = run(stableEvents);

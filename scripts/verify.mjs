@@ -90,7 +90,7 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await dismissGuide(page);
   await page.locator(".viewport canvas").waitFor();
-  await page.waitForTimeout(1600);
+  await page.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
   assert.equal(await page.locator(".webgl-error").count(), 0);
   await assertLayout(page, "desktop");
   const initial = await canvasStats(page);
@@ -190,6 +190,9 @@ try {
     const download = await downloadPromise;
     const exported = JSON.parse(await readFile(await download.path(), "utf8"));
     assert.equal(exported.pottery.id, stored[0].id);
+    assert.equal(exported.version, 2);
+    assert.equal(stored[0].simulation.version, 2);
+    assert.ok(Array.isArray(stored[0].simulation.pulses));
     log(
       `Completed and collected ${stored[0].steps} deposition steps; export contains ${stored[0].events.length} process events.`,
     );
@@ -200,7 +203,7 @@ try {
       .getByRole("button", { name: "查看作品：下粗上稳 · 实验 001" })
       .click();
     await page.locator(".detail-scene canvas").waitFor();
-    await page.waitForTimeout(500);
+    await page.locator('.detail-scene .clay-scene[data-render-state="ready"]').waitFor();
     const detail = await canvasStats(page, ".detail-scene canvas");
     assert.ok(detail.max - detail.min > 40);
     await page.screenshot({
@@ -227,7 +230,7 @@ try {
     mobile.on("pageerror", (error) => errors.push(error.message));
     await mobile.goto(baseUrl, { waitUntil: "networkidle" });
     await dismissGuide(mobile);
-    await mobile.waitForTimeout(900);
+    await mobile.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
     await assertLayout(mobile, `viewport ${width}`);
     const pixels = await canvasStats(mobile);
     assert.ok(
@@ -272,6 +275,7 @@ try {
         .getByRole("button", { name: "查看作品：移动端试作" })
         .click();
       await assertLayout(mobile, "mobile detail");
+      await mobile.locator('.detail-scene .clay-scene[data-render-state="ready"]').waitFor();
       const imagePromise = mobile.waitForEvent("download");
       await mobile.getByRole("button", { name: "保存作品图像" }).click();
       const imageFile = await imagePromise;

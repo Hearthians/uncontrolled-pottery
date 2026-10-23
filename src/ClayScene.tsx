@@ -7,16 +7,27 @@ import {
   LAYER_HEIGHT,
   SEGMENTS,
   TOTAL_STEPS,
-  generateDeposits,
 } from "./simulation";
-import type { Deposit, Pottery } from "./simulation";
+import type { Pottery, SceneDeposit } from "./pottery";
+import type { NozzlePose } from "./materialSimulation";
+import { loadDeposits } from "./depositLoader";
 
 const SIDES = 8;
+const VERTICES = SIDES + 2;
+const INDEX_STRIDE = SIDES * 6;
 const MAX_NODES = TOTAL_STEPS + 1;
+const CROSS_SECTION = Array.from({ length: SIDES }, (_, j) => ({
+  ca: Math.cos(j / SIDES * Math.PI * 2),
+  sa: Math.sin(j / SIDES * Math.PI * 2),
+}));
+const RADIAL = Array.from({ length: MAX_NODES }, (_, i) => ({
+  ct: Math.cos(i / SEGMENTS * Math.PI * 2),
+  st: Math.sin(i / SEGMENTS * Math.PI * 2),
+}));
 
 export interface SceneHandle {
   reset: () => void;
-  append: (deposits: Deposit[], start: number) => void;
+  append: (deposits: SceneDeposit[], start: number, nozzle?: NozzlePose) => void;
   display: (pottery: Pottery) => void;
   capture: () => string;
   resetView: () => void;
@@ -31,6 +42,7 @@ type Props = {
   miniature?: boolean;
   onError?: () => void;
   onSnapshot?: (image: string) => void;
+  initialNozzle?: NozzlePose;
 };
 
 interface World {
@@ -46,72 +58,133 @@ interface World {
   normals: Float32Array;
   colors: Float32Array;
   indices: Uint32Array;
+  indexEnds: Uint32Array;
   nodes: number;
   planned: boolean;
   printing: boolean;
   miniature: boolean;
+  revision: number;
+  ready: boolean;
 }
 
-function appendNodes(world: World, deposits: Deposit[], start: number) {
+function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozzle?: NozzlePose) {
   const { positions, normals, colors, indices, mesh } = world;
+  start = Math.min(world.nodes, Math.max(0, start - 1));
+  // Compact indices omit missing spans; offsets keep later uploads incremental.
+  const indexStart = world.indexEnds[start];
+  let cursor = indexStart;
   for (let i = start; i < deposits.length; i++) {
     const p = deposits[i];
-    const theta = (i / SEGMENTS) * Math.PI * 2;
-    const ct = Math.cos(theta);
-    const st = Math.sin(theta);
-    const color =
-      0.43 +
-      Math.sin(i * 0.17) * 0.009 +
-      Math.sin((i / SEGMENTS) * 1.8) * 0.018;
+    const previous = deposits[i - 1];
+    const next = deposits[i + 1];
+    const material = p.halfHeight !== undefined;
+    const halfHeight = p.halfHeight ?? p.thickness * 0.88;
+    const { ct, st } = RADIAL[i];
+    const before = previous && !previous.gap ? previous : p;
+    const after = next && !next.gap ? next : p;
+    const length = Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z);
+    const tx = length > 1e-8 ? (after.x - before.x) / length : -st;
+    const ty = length > 1e-8 ? (after.y - before.y) / length : 0;
+    const tz = length > 1e-8 ? (after.z - before.z) / length : ct;
+    const upLength = Math.hypot(ty * st, tz * ct - tx * st, -ty * ct) || 1;
+    const ux = material ? ty * st / upLength : 0;
+    const uy = material ? (tz * ct - tx * st) / upLength : 1;
+    const uz = material ? -ty * ct / upLength : 0;
+    const color = 0.43 + Math.sin(i * 0.17) * 0.009 + Math.sin((i / SEGMENTS) * 1.8) * 0.018;
+    const invWidth = 1 / Math.max(p.thickness, 0.001);
+    const invHeight = 1 / Math.max(halfHeight, 0.001);
     for (let j = 0; j < SIDES; j++) {
-      const angle = (j / SIDES) * Math.PI * 2;
-      const ca = Math.cos(angle);
-      const sa = Math.sin(angle);
-      const offset = (i * SIDES + j) * 3;
-      positions[offset] = p.x + ct * ca * p.thickness;
-      positions[offset + 1] = p.y + sa * p.thickness * 0.88;
-      positions[offset + 2] = p.z + st * ca * p.thickness;
-      normals[offset] = ct * ca;
-      normals[offset + 1] = sa;
-      normals[offset + 2] = st * ca;
+      const { ca, sa } = CROSS_SECTION[j];
+      const offset = (i * VERTICES + j) * 3;
+      positions[offset] = p.x + ct * ca * p.thickness + ux * sa * halfHeight;
+      positions[offset + 1] = p.y + uy * sa * halfHeight;
+      positions[offset + 2] = p.z + st * ca * p.thickness + uz * sa * halfHeight;
+      const nx = ct * ca * invWidth + ux * sa * invHeight;
+      const ny = uy * sa * invHeight;
+      const nz = st * ca * invWidth + uz * sa * invHeight;
+      const nl = Math.sqrt(ca * ca * invWidth * invWidth + sa * sa * invHeight * invHeight) || 1;
+      normals[offset] = material ? nx / nl : ct * ca;
+      normals[offset + 1] = material ? ny / nl : sa;
+      normals[offset + 2] = material ? nz / nl : st * ca;
       colors[offset] = color * 1.015;
       colors[offset + 1] = color;
       colors[offset + 2] = color * 0.953;
     }
-    if (i > 0) {
-      const visible = !p.gap && !deposits[i - 1].gap;
-      for (let j = 0; j < SIDES; j++) {
-        const a = (i - 1) * SIDES + j;
-        const b = (i - 1) * SIDES + ((j + 1) % SIDES);
-        const c = i * SIDES + j;
-        const d = i * SIDES + ((j + 1) % SIDES);
-        const offset = ((i - 1) * SIDES + j) * 6;
-        indices.set(visible ? [a, b, c, b, d, c] : [a, a, a, a, a, a], offset);
+    for (let cap = 0; cap < 2; cap++) {
+      const offset = (i * VERTICES + SIDES + cap) * 3;
+      const sign = cap === 0 ? -1 : 1;
+      const depth = material ? 0.012 : 0;
+      positions[offset] = p.x + tx * depth * sign;
+      positions[offset + 1] = p.y + ty * depth * sign;
+      positions[offset + 2] = p.z + tz * depth * sign;
+      normals[offset] = tx * sign;
+      normals[offset + 1] = ty * sign;
+      normals[offset + 2] = tz * sign;
+      colors[offset] = color * 1.015;
+      colors[offset + 1] = color;
+      colors[offset + 2] = color * 0.953;
+    }
+    for (let j = 0; j < SIDES; j++) {
+      const c = i * VERTICES + j;
+      const d = i * VERTICES + ((j + 1) % SIDES);
+      if (!p.gap && previous && !previous.gap) {
+        const a = (i - 1) * VERTICES + j;
+        const b = (i - 1) * VERTICES + ((j + 1) % SIDES);
+        indices[cursor++] = a;
+        indices[cursor++] = b;
+        indices[cursor++] = c;
+        indices[cursor++] = b;
+        indices[cursor++] = d;
+        indices[cursor++] = c;
+      }
+      if (material && !p.gap && (!previous || previous.gap)) {
+        indices[cursor++] = i * VERTICES + SIDES;
+        indices[cursor++] = d;
+        indices[cursor++] = c;
+      }
+      if (material && !p.gap && (!next || next.gap)) {
+        indices[cursor++] = i * VERTICES + SIDES + 1;
+        indices[cursor++] = c;
+        indices[cursor++] = d;
       }
     }
+    world.indexEnds[i + 1] = cursor;
   }
   for (const name of ["position", "normal", "color"]) {
     const attribute = mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
     attribute.clearUpdateRanges();
     attribute.addUpdateRange(
-      start * SIDES * 3,
-      (deposits.length - start) * SIDES * 3,
+      start * VERTICES * 3,
+      (deposits.length - start) * VERTICES * 3,
     );
     attribute.needsUpdate = true;
   }
   const index = mesh.geometry.index!;
   index.clearUpdateRanges();
   index.addUpdateRange(
-    Math.max(0, start - 1) * SIDES * 6,
-    Math.max(0, deposits.length - Math.max(1, start)) * SIDES * 6,
+    indexStart,
+    cursor - indexStart,
   );
   index.needsUpdate = true;
-  mesh.geometry.setDrawRange(0, Math.max(0, deposits.length - 1) * SIDES * 6);
+  mesh.geometry.setDrawRange(0, cursor);
   world.nodes = deposits.length;
+  world.renderer.domElement.dataset.nodes = String(deposits.length);
   const last = deposits.at(-1);
   if (last) {
-    world.head.position.set(last.x, last.y + 0.075, last.z);
-    world.stream.visible = !last.gap;
+    const pose = nozzle ?? { x: last.x, y: last.y + 0.13, z: last.z, flow: last.gap ? 0 : 1, contactY: last.y };
+    world.head.position.set(pose.x, pose.y, pose.z);
+    const top = new THREE.Vector3(pose.x, pose.y, pose.z);
+    const bottom = new THREE.Vector3(last.x, pose.contactY, last.z);
+    const direction = top.clone().sub(bottom);
+    const distance = direction.length();
+    world.stream.visible = world.printing && !last.gap && pose.flow >= 0.085 && distance > 0.001;
+    world.stream.position.copy(top.add(bottom).multiplyScalar(0.5));
+    world.stream.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    world.stream.scale.set(0.04 * Math.sqrt(Math.max(pose.flow, 0)), distance, 0.04 * Math.sqrt(Math.max(pose.flow, 0)));
+    world.renderer.domElement.dataset.nozzleX = pose.x.toFixed(5);
+    world.renderer.domElement.dataset.nozzleY = pose.y.toFixed(5);
+    world.renderer.domElement.dataset.nozzleZ = pose.z.toFixed(5);
+    world.renderer.domElement.dataset.flow = pose.flow.toFixed(5);
   }
 }
 
@@ -141,6 +214,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
     const container = useRef<HTMLDivElement>(null);
     const worldRef = useRef<World | null>(null);
     const initialProps = useRef(props);
+    const loadRef = useRef<(pottery: Pottery) => void>(() => {});
 
     useImperativeHandle(
       ref,
@@ -150,23 +224,34 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
           if (!w) return;
           w.mesh.geometry.setDrawRange(0, 0);
           w.nodes = 0;
+          w.revision++;
+          w.ready = true;
+          w.stream.visible = false;
           w.head.position.set(BASE_RADIUS, 0.13, 0);
+          if (container.current) container.current.dataset.renderState = "ready";
           resetCamera(w);
         },
-        append(deposits, start) {
-          if (worldRef.current) appendNodes(worldRef.current, deposits, start);
-        },
-        display(pottery) {
+        append(deposits, start, nozzle) {
           const w = worldRef.current;
           if (!w) return;
-          appendNodes(w, generateDeposits(pottery), 0);
-          resetCamera(w);
+          if (!w.ready) {
+            w.revision++;
+            w.ready = true;
+            start = 0;
+            if (container.current) container.current.dataset.renderState = "ready";
+          }
+          appendNodes(w, deposits, start, nozzle);
+        },
+        display(pottery) {
+          loadRef.current(pottery);
         },
         capture() {
           const w = worldRef.current;
-          if (!w) return "";
+          if (!w || !w.ready) return "";
           const visible = w.head.visible;
+          const flowing = w.stream.visible;
           w.head.visible = false;
+          w.stream.visible = false;
           w.renderer.render(w.scene, w.camera);
           const source = w.renderer.domElement;
           const canvas = document.createElement("canvas");
@@ -186,6 +271,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
             480,
           );
           w.head.visible = visible;
+          w.stream.visible = flowing;
           return canvas.toDataURL("image/webp", 0.85);
         },
         resetView() {
@@ -325,10 +411,10 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       base.receiveShadow = true;
       scene.add(base);
 
-      const positions = new Float32Array(MAX_NODES * SIDES * 3);
-      const normals = new Float32Array(MAX_NODES * SIDES * 3);
-      const colors = new Float32Array(MAX_NODES * SIDES * 3);
-      const indices = new Uint32Array(TOTAL_STEPS * SIDES * 6);
+      const positions = new Float32Array(MAX_NODES * VERTICES * 3);
+      const normals = new Float32Array(MAX_NODES * VERTICES * 3);
+      const colors = new Float32Array(MAX_NODES * VERTICES * 3);
+      const indices = new Uint32Array(MAX_NODES * INDEX_STRIDE);
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute(
         "position",
@@ -424,24 +510,24 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         roughness: 0.24,
       });
       const tip = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.078, 0.027, 0.19, 24),
+        new THREE.CylinderGeometry(0.12, 0.082, 0.22, 24),
         silver,
       );
-      tip.position.y = 0.15;
+      tip.position.y = 0.11;
       head.add(tip);
       const nozzle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.09, 0.37, 32),
+        new THREE.CylinderGeometry(0.125, 0.125, 0.37, 32),
         steel,
       );
       nozzle.position.y = 0.43;
       head.add(nozzle);
-      for (let i = 0; i < 5; i++) {
-        const heatRing = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.115, 0.115, 0.023, 32),
+      for (let i = 0; i < 2; i++) {
+        const coupling = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.145, 0.145, 0.05, 6),
           steel,
         );
-        heatRing.position.y = 0.32 + i * 0.045;
-        head.add(heatRing);
+        coupling.position.y = 0.27 + i * 0.29;
+        head.add(coupling);
       }
       const sleeve = new THREE.Mesh(
         new THREE.CylinderGeometry(0.068, 0.068, 3.8, 24),
@@ -456,11 +542,11 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       headBand.position.y = 0.6;
       head.add(headBand);
       const stream = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.022, 0.026, 0.12, 12),
+        new THREE.CylinderGeometry(1, 1, 1, 12),
         new THREE.MeshStandardMaterial({ color: "#bdbdb1", roughness: 0.8 }),
       );
-      stream.position.y = 0.01;
-      head.add(stream);
+      stream.visible = false;
+      scene.add(stream);
       head.visible = initial.printing ?? false;
       scene.add(head);
 
@@ -477,13 +563,16 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         normals,
         colors,
         indices,
+        indexEnds: new Uint32Array(MAX_NODES + 1),
         nodes: 0,
         planned: initial.planned ?? true,
         printing: initial.printing ?? false,
         miniature: !!initial.miniature,
+        revision: 0,
+        ready: false,
       };
       worldRef.current = world;
-      appendNodes(world, generateDeposits(initial.initial), 0);
+      host.dataset.renderState = "loading";
       resetCamera(world);
 
       let snapshotFrame = 0;
@@ -512,7 +601,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         );
         if (initial.miniature) {
           renderer.render(scene, camera);
-          if (!snapshotTaken && initial.onSnapshot) {
+          if (world.ready && !snapshotTaken && initial.onSnapshot) {
             snapshotTaken = true;
             snapshotFrame = requestAnimationFrame(() =>
               initial.onSnapshot?.(
@@ -525,6 +614,23 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       const observer = new ResizeObserver(resize);
       observer.observe(host);
       resize();
+      loadRef.current = (pottery) => {
+        const revision = ++world.revision;
+        world.ready = false;
+        host.dataset.renderState = "loading";
+        host.dataset.engine = pottery.simulation ? "2" : "1";
+        loadDeposits(pottery).then((deposits) => {
+          if (worldRef.current !== world || revision !== world.revision) return;
+          appendNodes(world, deposits, 0, initial.initialNozzle);
+          world.ready = true;
+          host.dataset.renderState = "ready";
+          resetCamera(world);
+          resize();
+        }).catch(() => {
+          if (worldRef.current === world && revision === world.revision) initial.onError?.();
+        });
+      };
+      loadRef.current(initial.initial);
       let frame = 0;
       const render = () => {
         frame = requestAnimationFrame(render);
@@ -561,7 +667,11 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         worldRef.current.controls.autoRotate = !!props.autoRotate;
     }, [props.autoRotate]);
     useEffect(() => {
-      if (worldRef.current) worldRef.current.head.visible = !!props.printing;
+      if (worldRef.current) {
+        worldRef.current.printing = !!props.printing;
+        worldRef.current.head.visible = !!props.printing;
+        if (!props.printing) worldRef.current.stream.visible = false;
+      }
     }, [props.printing]);
 
     return (

@@ -1,6 +1,6 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 await mkdir("artifacts", { recursive: true });
 const palms = (await readFile("tests/fixtures/right_hands.jpg")).toString(
@@ -18,7 +18,10 @@ const browser = await chromium.launch({
 });
 const errors = [];
 const log = (message) => console.log("[gestures]", message);
-const baseUrl = process.env.POTTERY_URL || "http://127.0.0.1:5173";
+const targetUrl = new URL(process.env.POTTERY_URL || "http://127.0.0.1:5173");
+const profile = process.argv.includes("--profile");
+if (profile) targetUrl.searchParams.set("profile", "1");
+const baseUrl = targetUrl.href;
 async function dismissGuide(page) {
   const close = page.getByRole("button", { name: "关闭引导", exact: true });
   if (await close.count()) await close.click();
@@ -107,7 +110,7 @@ try {
   );
   assert.equal(
     await page.getByRole("slider", { name: "供料波动" }).inputValue(),
-    "35",
+    "0",
     "the known right-hand fixture must control interruption, preserving anatomical handedness",
   );
   await page.getByRole("button", { name: "交换左右手", exact: true }).click();
@@ -160,7 +163,8 @@ try {
   await page.evaluate(() => {
     window.cameraFixture.mode = "palms";
   });
-  await page.waitForTimeout(1600);
+  await page.getByRole("button", { name: "收藏这件作品", exact: true }).waitFor();
+  await page.waitForTimeout(1500);
   assert.equal(
     await page
       .getByRole("button", { name: "收藏这件作品", exact: true })
@@ -176,6 +180,15 @@ try {
   assert.equal(saved.length, 1);
   assert.ok(saved[0].events.some((event) => event.fluctuation === 100));
   assert.ok(saved[0].events.some((event) => event.interruption === 100));
+  if (profile) {
+    const timings = await page.evaluate(() => {
+      const values = performance.getEntriesByName("pottery:deposition").map((entry) => entry.duration).sort((a, b) => a - b);
+      return { count: values.length, meanMs: values.reduce((sum, value) => sum + value, 0) / values.length,
+        p95Ms: values[Math.floor(values.length * 0.95)], maxMs: values.at(-1) };
+    });
+    await writeFile("artifacts/material-gesture-performance.json", `${JSON.stringify(timings, null, 2)}\n`);
+    log(`Simulation and geometry with real hand detection active: ${JSON.stringify(timings)}`);
+  }
   await page.getByRole("button", { name: "鼠标控制", exact: true }).click();
   await page.waitForFunction(() =>
     window.cameraFixture.tracks.every((track) => track.readyState === "ended"),
@@ -183,7 +196,7 @@ try {
   assert.equal(await page.locator(".gesture-console").count(), 0);
   assert.equal(
     await page.getByRole("slider", { name: "供料波动" }).isEnabled(),
-    true,
+    false,
   );
   log(
     "Completed works survived command poses; parameter history saved and camera tracks released.",

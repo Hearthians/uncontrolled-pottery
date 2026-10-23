@@ -79,7 +79,7 @@ function randomSequence(seed: number) {
 
 export function plannedNozzle(step: number): NozzlePose {
   const theta = step / SEGMENTS * Math.PI * 2;
-  const rise = step < SEGMENTS ? 0 : step / SEGMENTS * LAYER_HEIGHT;
+  const rise = step / SEGMENTS * LAYER_HEIGHT;
   return {
     x: Math.cos(theta) * BASE_RADIUS,
     y: BASE_TOP + LAYER_HEIGHT + rise,
@@ -284,6 +284,9 @@ export class MaterialSimulation {
   private relaxPoint(index: number) {
     const point = this.deposits[index];
     if (point.gap) return;
+    const oldY = point.y;
+    const oldHeight = point.halfHeight;
+    const oldWidth = point.thickness;
     const support = this.deposits[point.support];
     const surface = support && !support.gap ? support.y + support.halfHeight : BASE_TOP;
     const originalHalfHeight = point.restHalfHeight;
@@ -312,7 +315,9 @@ export class MaterialSimulation {
       Math.hypot(point.x - previous.x, point.y - previous.y, point.z - previous.z) : PATH_DS;
     point.thickness = point.volume / Math.max(PATH_DS * 0.8, length) /
       (Math.PI * point.halfHeight);
-    this.dirtyStart = Math.min(this.dirtyStart, index);
+    if (Math.abs(point.y - oldY) + Math.abs(point.halfHeight - oldHeight) +
+      Math.abs(point.thickness - oldWidth) > 1e-7)
+      this.dirtyStart = Math.min(this.dirtyStart, index);
   }
 
   private relax() {

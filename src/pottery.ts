@@ -5,19 +5,23 @@ import {
 } from "./simulation.ts";
 import type { Pottery as LegacyPottery } from "./simulation.ts";
 import { MaterialSimulation, MATERIAL_PROFILE, MATERIAL_TICKS, RUNOUT_STEPS, validMaterialRecord } from "./materialSimulation.ts";
-import type { MaterialDeposit, MaterialRecord } from "./materialSimulation.ts";
+import type { MaterialRecord } from "./materialSimulation.ts";
 import type { Deposit } from "./simulation.ts";
 
 export { DURATION, LAYERS, SEGMENTS, TOTAL_STEPS, meanSettings } from "./simulation.ts";
 export type { Settings, ProcessEvent } from "./simulation.ts";
 export type Pottery = LegacyPottery & { simulation?: MaterialRecord };
-export type SceneDeposit = Deposit | MaterialDeposit;
+export type SceneDeposit = Deposit & { halfHeight?: number };
 export const DEFAULT_SETTINGS = { fluctuation: 0, interruption: 0, sag: true };
 
 export function isPottery(value: unknown): value is Pottery {
-  if (!isLegacyPottery(value)) return false;
-  const pottery = value as Pottery;
-  return pottery.simulation === undefined || validMaterialRecord(pottery.simulation, pottery.steps);
+  try {
+    if (!isLegacyPottery(value)) return false;
+    const pottery = value as Pottery;
+    return pottery.simulation === undefined || validMaterialRecord(pottery.simulation, pottery.steps);
+  } catch {
+    return false;
+  }
 }
 
 export function generateDeposits(pottery: Pottery): SceneDeposit[] {
