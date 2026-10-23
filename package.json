@@ -1,0 +1,36 @@
+{
+  "name": "uncontrolled-pottery",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "build:public": "tsc -b && vite build --base=/pottery/ --outDir=dist-public",
+    "public:start": "node scripts/public-forward.mjs start",
+    "public:stop": "node scripts/public-forward.mjs stop",
+    "public:status": "node scripts/public-forward.mjs status",
+    "test": "node --test tests/*.test.mjs",
+    "verify:browser": "node scripts/verify.mjs",
+    "verify:gestures": "node scripts/verify-gestures.mjs",
+    "verify:loading": "node scripts/verify-loading.mjs",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.32",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0"
+  }
+}
