@@ -30,7 +30,8 @@ async function canvasStats(page, selector = ".viewport canvas") {
   return page
     .locator(selector)
     .first()
-    .evaluate((source) => {
+    .evaluate(async (source) => {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const canvas = document.createElement("canvas");
       canvas.width = 160;
       canvas.height = 160;
