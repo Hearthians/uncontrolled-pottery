@@ -14,7 +14,7 @@ import { loadDeposits } from "./depositLoader";
 
 const SIDES = 8;
 const VERTICES = SIDES + 2;
-const INDEX_STRIDE = SIDES * 6;
+const INDEX_STRIDE = SIDES * 9;
 const MAX_NODES = TOTAL_STEPS + 1;
 const CROSS_SECTION = Array.from({ length: SIDES }, (_, j) => ({
   ca: Math.cos(j / SIDES * Math.PI * 2),
@@ -80,28 +80,43 @@ function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozz
     const material = p.halfHeight !== undefined;
     const halfHeight = p.halfHeight ?? p.thickness * 0.88;
     const { ct, st } = RADIAL[i];
-    const before = previous && !previous.gap ? previous : p;
-    const after = next && !next.gap ? next : p;
+    const before = previous && !previous.gap && !p.breakBefore ? previous : p;
+    const after = next && !next.gap && !next.breakBefore ? next : p;
     const length = Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z);
     const tx = length > 1e-8 ? (after.x - before.x) / length : -st;
     const ty = length > 1e-8 ? (after.y - before.y) / length : 0;
     const tz = length > 1e-8 ? (after.z - before.z) / length : ct;
     const upLength = Math.hypot(ty * st, tz * ct - tx * st, -ty * ct) || 1;
-    const ux = material ? ty * st / upLength : 0;
-    const uy = material ? (tz * ct - tx * st) / upLength : 1;
-    const uz = material ? -ty * ct / upLength : 0;
+    let ux = material ? ty * st / upLength : 0;
+    let uy = material ? (tz * ct - tx * st) / upLength : 1;
+    let uz = material ? -ty * ct / upLength : 0;
+    let rx = ct, ry = 0, rz = st;
+    if (p.breakBefore !== undefined) {
+      // The v3 strand is no longer constrained to a radial cylinder. Build an
+      // orthonormal frame from its actual tangent; keep v1/v2 normals unchanged.
+      const horizontal = Math.hypot(tx, tz);
+      rx = horizontal > 1e-6 ? tz / horizontal : ct;
+      rz = horizontal > 1e-6 ? -tx / horizontal : st;
+      const dot = rx * tx + rz * tz;
+      rx -= dot * tx; ry = -dot * ty; rz -= dot * tz;
+      const radialLength = Math.hypot(rx, ry, rz) || 1;
+      rx /= radialLength; ry /= radialLength; rz /= radialLength;
+      ux = ty * rz - tz * ry;
+      uy = tz * rx - tx * rz;
+      uz = tx * ry - ty * rx;
+    }
     const color = 0.43 + Math.sin(i * 0.17) * 0.009 + Math.sin((i / SEGMENTS) * 1.8) * 0.018;
     const invWidth = 1 / Math.max(p.thickness, 0.001);
     const invHeight = 1 / Math.max(halfHeight, 0.001);
     for (let j = 0; j < SIDES; j++) {
       const { ca, sa } = CROSS_SECTION[j];
       const offset = (i * VERTICES + j) * 3;
-      positions[offset] = p.x + ct * ca * p.thickness + ux * sa * halfHeight;
-      positions[offset + 1] = p.y + uy * sa * halfHeight;
-      positions[offset + 2] = p.z + st * ca * p.thickness + uz * sa * halfHeight;
-      const nx = ct * ca * invWidth + ux * sa * invHeight;
-      const ny = uy * sa * invHeight;
-      const nz = st * ca * invWidth + uz * sa * invHeight;
+      positions[offset] = p.x + rx * ca * p.thickness + ux * sa * halfHeight;
+      positions[offset + 1] = p.y + ry * ca * p.thickness + uy * sa * halfHeight;
+      positions[offset + 2] = p.z + rz * ca * p.thickness + uz * sa * halfHeight;
+      const nx = rx * ca * invWidth + ux * sa * invHeight;
+      const ny = ry * ca * invWidth + uy * sa * invHeight;
+      const nz = rz * ca * invWidth + uz * sa * invHeight;
       const nl = Math.sqrt(ca * ca * invWidth * invWidth + sa * sa * invHeight * invHeight) || 1;
       normals[offset] = material ? nx / nl : ct * ca;
       normals[offset + 1] = material ? ny / nl : sa;
@@ -127,7 +142,7 @@ function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozz
     for (let j = 0; j < SIDES; j++) {
       const c = i * VERTICES + j;
       const d = i * VERTICES + ((j + 1) % SIDES);
-      if (!p.gap && previous && !previous.gap) {
+      if (!p.gap && previous && !previous.gap && !p.breakBefore) {
         const a = (i - 1) * VERTICES + j;
         const b = (i - 1) * VERTICES + ((j + 1) % SIDES);
         indices[cursor++] = a;
@@ -137,12 +152,12 @@ function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozz
         indices[cursor++] = d;
         indices[cursor++] = c;
       }
-      if (material && !p.gap && (!previous || previous.gap)) {
+      if (material && !p.gap && (!previous || previous.gap || p.breakBefore)) {
         indices[cursor++] = i * VERTICES + SIDES;
         indices[cursor++] = d;
         indices[cursor++] = c;
       }
-      if (material && !p.gap && (!next || next.gap)) {
+      if (material && !p.gap && (!next || next.gap || next.breakBefore)) {
         indices[cursor++] = i * VERTICES + SIDES + 1;
         indices[cursor++] = c;
         indices[cursor++] = d;
@@ -618,7 +633,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         const revision = ++world.revision;
         world.ready = false;
         host.dataset.renderState = "loading";
-        host.dataset.engine = pottery.simulation ? "2" : "1";
+        host.dataset.engine = String(pottery.simulation?.version ?? 1);
         loadDeposits(pottery).then((deposits) => {
           if (worldRef.current !== world || revision !== world.revision) return;
           appendNodes(world, deposits, 0, initial.initialNozzle);

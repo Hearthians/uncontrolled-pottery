@@ -1,8 +1,10 @@
 node_modules/
 dist/
 dist-public/
+dist-public.previous/
 .runtime/
 test-results/
 .vite/
 artifacts/
+embeddings_lab_updated.zip
 *.tsbuildinfo

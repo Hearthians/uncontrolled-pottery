@@ -987,6 +987,87 @@ input[type="range"] {
   height: 28px;
   justify-content: center;
 }
+.emotion-plan-copy {
+  padding: 22px 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.emotion-plan-copy > span,
+.emotion-stage > span {
+  font: 8px var(--mono);
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+.emotion-plan-copy h3 {
+  margin-top: 9px;
+  font-size: 18px;
+  font-weight: 520;
+  line-height: 1.35;
+  color: #44503f;
+}
+.emotion-plan-copy p {
+  margin-top: 11px;
+  font-size: 10px;
+  line-height: 1.75;
+  color: #818b79;
+}
+.emotion-stage {
+  padding-top: 19px;
+}
+.emotion-stage h3 {
+  min-height: 39px;
+  margin-top: 7px;
+  font-size: 14px;
+  font-weight: 520;
+  line-height: 1.45;
+  color: #53614b;
+}
+.emotion-stage > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 12px;
+}
+.emotion-stage i {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  background: #e2e7dc;
+}
+.emotion-stage i:after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--emotion-value);
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+.emotion-stage small {
+  display: block;
+  margin-top: 7px;
+  font: 7px var(--mono);
+  color: #a0a895;
+  letter-spacing: 0.05em;
+}
+.emotion-timeline {
+  position: relative;
+  height: 18px;
+  margin: 20px 3px 0;
+  border-top: 1px solid #d9dfd2;
+}
+.emotion-timeline i {
+  position: absolute;
+  top: -3px;
+  width: 5px;
+  height: 5px;
+  transform: translateX(-50%);
+  border: 1px solid #aab5a1;
+  border-radius: 50%;
+  background: #f9faf6;
+}
+.emotion-timeline i.passed {
+  border-color: var(--accent);
+  background: var(--accent);
+}
 .print-actions {
   margin-top: auto;
   padding-top: 12px;
@@ -1712,6 +1793,14 @@ input[type="range"] {
   margin-top: 4px;
   line-height: 1.7;
 }
+.guide-method-note {
+  margin: 8px 0 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  color: #87917f;
+  font-size: 10px;
+  line-height: 1.75;
+}
 .guide-model-status {
   height: 48px;
   padding: 8px 0;
@@ -2202,6 +2291,21 @@ input[type="range"] {
   }
   .material-row {
     display: none;
+  }
+  .emotion-panel {
+    display: flex;
+  }
+  .emotion-plan-copy {
+    padding: 0 0 14px;
+  }
+  .emotion-plan-copy p {
+    display: none;
+  }
+  .emotion-stage {
+    padding-top: 14px;
+  }
+  .emotion-stage h3 {
+    min-height: 0;
   }
   .material-code {
     font-size: 8px;

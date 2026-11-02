@@ -151,6 +151,7 @@ async function supervise() {
     "-N", "-T",
     "-i", join(homedir(), ".ssh/id_ed25519_hpc_peers"),
     "-o", "BatchMode=yes",
+    "-o", "StrictHostKeyChecking=yes",
     "-o", "IdentitiesOnly=yes",
     "-o", "ExitOnForwardFailure=yes",
     "-o", "ConnectTimeout=10",

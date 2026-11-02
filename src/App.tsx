@@ -6,37 +6,27 @@ import {
   AudioLines,
   Box,
   Check,
-  Camera,
   ChevronDown,
   CircleHelp,
   Expand,
   Eye,
   EyeOff,
   GalleryHorizontalEnd,
-  Hand,
-  Grab,
   Layers3,
   Maximize2,
   MoveUpRight,
-  MousePointer2,
   Pause,
   Play,
   Plus,
-  RotateCcw,
   RotateCw,
-  SlidersHorizontal,
+  Sparkles,
   Square,
   Upload,
   X,
 } from "lucide-react";
 import { ClayScene } from "./ClayScene";
-import { GestureCamera } from "./GestureCamera";
-import { HandModelStatus } from "./HandModelStatus";
-import { useHandModel } from "./handModel";
-import type { GestureUpdate, PrintStatus } from "./gestures";
 import type { SceneHandle } from "./ClayScene";
 import {
-  DEFAULT_SETTINGS,
   DURATION,
   LAYERS,
   PRESETS,
@@ -45,11 +35,17 @@ import {
   isPottery,
   meanSettings,
 } from "./pottery";
-import type { Pottery, Settings } from "./pottery";
-import { MaterialSimulation, MATERIAL_TICKS } from "./materialSimulation";
+import type { Pottery } from "./pottery";
+import { MATERIAL_TICKS } from "./materialSimulation";
+import { PlasticSimulation } from "./plasticSimulation";
+import {
+  COLLECTIVE_EMOTION_PLAN,
+  emotionAtStep,
+  emotionPlanToEvents,
+} from "./emotionTrajectory";
 import { createArchive, MAX_ARCHIVE_BYTES, parseArchive } from "./archive";
 
-type Status = PrintStatus;
+type Status = "ready" | "printing" | "paused" | "complete";
 type Page = "studio" | "gallery";
 const STORAGE_KEY = "uncontrolled-pottery-v1";
 const GUIDE_KEY = "uncontrolled-pottery-guide-v1";
@@ -95,66 +91,6 @@ function IconButton({
     >
       {children}
     </button>
-  );
-}
-
-function ControlSlider({
-  label,
-  value,
-  onChange,
-  kind,
-  disabled = false,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  kind: "wave" | "break";
-  disabled?: boolean;
-}) {
-  return (
-    <section className="control-section">
-      <div className="control-label">
-        <div>
-          <h3>{label}</h3>
-        </div>
-        <div className="value-display">
-          {value}
-          <span>%</span>
-        </div>
-      </div>
-      <div className={`signal-preview ${kind}`} aria-hidden="true">
-        {Array.from({ length: 48 }, (_, i) => {
-          const amplitude =
-            kind === "wave"
-              ? 4 + (0.5 + 0.5 * Math.sin(i * 0.6)) * value * 0.24
-              : 9;
-          const gap = kind === "break" && (i * 17 + 23) % 100 < value;
-          return (
-            <i
-              key={i}
-              style={{
-                height: gap ? 2 : amplitude,
-                opacity: gap ? 0.13 : 0.7 + (i % 3) * 0.1,
-              }}
-            />
-          );
-        })}
-      </div>
-      <input
-        aria-label={label}
-        type="range"
-        min="0"
-        max="100"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(Number(event.target.value))}
-        style={{ "--range-progress": `${value}%` } as React.CSSProperties}
-      />
-      <div className="range-labels">
-        <span>{kind === "wave" ? "均匀" : "连续"}</span>
-        <span>{kind === "wave" ? "起伏" : "断续"}</span>
-      </div>
-    </section>
   );
 }
 
@@ -277,10 +213,10 @@ function GalleryItem({
 }
 
 export default function App() {
-  const model = useHandModel();
+  const initialEmotion = COLLECTIVE_EMOTION_PLAN.trajectory[0];
   const [page, setPage] = useState<Page>("studio");
   const [status, setStatus] = useState<Status>("ready");
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [currentEmotion, setCurrentEmotion] = useState(initialEmotion);
   const [progress, setProgress] = useState(0);
   const [planned, setPlanned] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
@@ -300,17 +236,15 @@ export default function App() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [webglError, setWebglError] = useState(false);
-  const [gestureEnabled, setGestureEnabled] = useState(false);
   const [galleryFilter, setGalleryFilter] = useState<"all" | "mine">("all");
   const sceneRef = useRef<SceneHandle>(null);
   const detailRef = useRef<SceneHandle>(null);
   const studioRef = useRef<HTMLDivElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const profileRef = useRef(new URLSearchParams(location.search).has("profile"));
-  const settingsRef = useRef(settings);
   const runRef = useRef<{
     pottery: Pottery;
-    engine: MaterialSimulation;
+    engine: PlasticSimulation;
     elapsed: number;
   } | null>(null);
   const allWorks = [...collection, ...PRESETS];
@@ -318,7 +252,6 @@ export default function App() {
   const currentLayer = runRef.current ? Math.min(LAYERS, Math.ceil(currentPottery.steps / SEGMENTS)) : 0;
   const isActive = status === "printing" || status === "paused";
   const finishing = !!runRef.current && runRef.current.engine.tick >= runRef.current.engine.stopStep;
-  const controlsLocked = status === "complete" || finishing;
 
   const notify = (message: string) => setNotice(message);
   function closeGuide() {
@@ -386,6 +319,9 @@ export default function App() {
       const engine = run.engine;
       const started = profileRef.current ? performance.now() : 0;
       engine.advanceTo(Math.floor(run.elapsed / DURATION * MATERIAL_TICKS), run.pottery.events);
+      // Match the last deposited layer's event on the original 64-layer plan.
+      // Neither early-stop runout nor settling should fast-forward the emotion arc.
+      const emotion = emotionAtStep(Math.max(0, engine.deposits.length - 1), run.pottery.emotionPlan);
       const simulated = profileRef.current ? performance.now() : 0;
       sceneRef.current?.append(engine.deposits, engine.dirtyStart, engine.nozzle);
       if (profileRef.current) {
@@ -399,6 +335,7 @@ export default function App() {
       run.pottery.duration = engine.tick / MATERIAL_TICKS * DURATION;
       if (now - uiTime > 70 || engine.complete) {
         setProgress(engine.tick / MATERIAL_TICKS);
+        setCurrentEmotion(emotion);
         uiTime = now;
       }
       if (engine.complete) {
@@ -410,40 +347,24 @@ export default function App() {
     return () => cancelAnimationFrame(frame);
   }, [status]);
 
-  function updateSettings(next: Settings, startWhenReady = false) {
-    if (controlsLocked) return;
-    settingsRef.current = next;
-    setSettings(next);
-    if (status === "ready" && startWhenReady) {
-      startPrint();
-      return;
-    }
-    const run = runRef.current;
-    if (run && (status === "printing" || status === "paused")) {
-      if (run.engine.tick >= run.engine.stopStep) return;
-      const event = { step: run.engine.tick, ...next };
-      const last = run.pottery.events.at(-1);
-      if (last?.step === event.step)
-        run.pottery.events[run.pottery.events.length - 1] = event;
-      else run.pottery.events.push(event);
-    }
-  }
-
   function startPrint() {
     const seed = Math.floor(Math.random() * 100000);
-    const engine = new MaterialSimulation(seed);
+    const engine = new PlasticSimulation(seed);
+    const events = emotionPlanToEvents();
+    setCurrentEmotion(COLLECTIVE_EMOTION_PLAN.trajectory[0]);
     const pottery: Pottery = {
       id:
         typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `pottery-${Date.now()}-${seed}`,
-      title: `未命名 ${String(collection.length + 1).padStart(3, "0")}`,
+      title: COLLECTIVE_EMOTION_PLAN.title,
       seed,
       steps: 0,
-      events: [{ step: 0, ...settingsRef.current }],
+      events,
       createdAt: new Date().toISOString(),
       duration: 0,
       simulation: engine.record(),
+      emotionPlan: structuredClone(COLLECTIVE_EMOTION_PLAN),
     };
     runRef.current = { pottery, engine, elapsed: 0 };
     setProgress(0);
@@ -460,19 +381,6 @@ export default function App() {
     run.engine.stop();
     run.pottery.simulation = run.engine.record();
     setStatus("printing");
-  }
-
-  function applyGesture(update: GestureUpdate) {
-    if (status === "complete" || (runRef.current && runRef.current.engine.tick >= runRef.current.engine.stopStep)) return;
-    if (Object.keys(update.values).length)
-      updateSettings({ ...settingsRef.current, ...update.values });
-    if (update.command === "run") {
-      if (status === "ready") startPrint();
-      else if (status === "paused") setStatus("printing");
-    } else if (update.command === "pause" && status === "printing") {
-      setStatus("paused");
-      if (update.reason === "lost") notify("手部信号丢失，打印已暂停");
-    }
   }
 
   function saveWork() {
@@ -619,7 +527,6 @@ export default function App() {
             </span>
           </button>
           <div className="topbar-tools">
-            <HandModelStatus state={model} />
             <IconButton label="操作引导" onClick={() => {
               if (status === "printing") setStatus("paused");
               setGuideOpen(true);
@@ -636,28 +543,13 @@ export default function App() {
                 <h1>打印工坊</h1>
               </div>
               <div className="heading-actions">
-                <div className="input-mode" role="group" aria-label="输入方式">
-                  <button
-                    aria-label="鼠标控制"
-                    title="鼠标控制"
-                    aria-pressed={!gestureEnabled}
-                    onClick={() => setGestureEnabled(false)}
-                  >
-                    <MousePointer2 size={16} />
-                  </button>
-                  <button
-                    aria-label="手势控制"
-                    title="手势控制"
-                    aria-pressed={gestureEnabled}
-                    onClick={() => setGestureEnabled(true)}
-                  >
-                    <Hand size={17} />
-                  </button>
-                </div>
+                <span className="session-label">
+                  {COLLECTIVE_EMOTION_PLAN.memoryCount} 条集体记忆
+                </span>
               </div>
             </div>
             <div
-              className={`workbench ${gestureEnabled ? "gesture-enabled" : ""}`}
+              className="workbench"
               ref={studioRef}
             >
               <section className="viewport">
@@ -694,7 +586,7 @@ export default function App() {
                     <button onClick={() => location.reload()}>重新加载</button>
                   </div>
                 )}
-                {status === "ready" && !webglError && !gestureEnabled && (
+                {status === "ready" && !webglError && (
                   <button
                     className="scene-start-button"
                     aria-label="从工作台开始打印"
@@ -767,57 +659,38 @@ export default function App() {
                 </div>
               </section>
 
-              <aside className="control-panel">
+              <aside className="control-panel emotion-panel">
                 <div className="panel-heading">
                   <div>
-                    <SlidersHorizontal size={17} />
-                    <h2>沉积控制</h2>
+                    <Sparkles size={17} />
+                    <h2>记忆轨迹</h2>
                   </div>
+                  <span>AGENT DIRECTED</span>
                 </div>
-                <ControlSlider
-                  label="供料波动"
-                  value={settings.fluctuation}
-                  kind="wave"
-                  disabled={gestureEnabled || controlsLocked}
-                  onChange={(value) =>
-                    updateSettings({ ...settings, fluctuation: value }, true)
-                  }
-                />
-                <ControlSlider
-                  label="供料中断"
-                  value={settings.interruption}
-                  kind="break"
-                  disabled={gestureEnabled || controlsLocked}
-                  onChange={(value) =>
-                    updateSettings({ ...settings, interruption: value }, true)
-                  }
-                />
-                <div className="sag-control">
+                <div className="emotion-plan-copy">
+                  <span>{COLLECTIVE_EMOTION_PLAN.memoryCount} 条集体记忆</span>
+                  <h3>{COLLECTIVE_EMOTION_PLAN.title}</h3>
+                  <p>{COLLECTIVE_EMOTION_PLAN.summary}</p>
+                </div>
+                <div className="emotion-stage" aria-live="polite">
+                  <span>{status === "ready" ? "起始阶段" : "当前情绪"}</span>
+                  <h3>{currentEmotion.label}</h3>
                   <div>
-                    <span>局部下垂</span>
+                    <i style={{ "--emotion-value": `${(currentEmotion.valence + 1) * 50}%` } as React.CSSProperties} />
+                    <i style={{ "--emotion-value": `${currentEmotion.arousal * 100}%` } as React.CSSProperties} />
+                    <i style={{ "--emotion-value": `${currentEmotion.dominance * 100}%` } as React.CSSProperties} />
                   </div>
-                  <button
-                    className={`toggle ${settings.sag ? "on" : ""}`}
-                    role="switch"
-                    aria-checked={settings.sag}
-                    aria-label="局部下垂"
-                    disabled={controlsLocked}
-                    onClick={() =>
-                      updateSettings({ ...settings, sag: !settings.sag })
-                    }
-                  >
-                    <i />
-                  </button>
+                  <small>效价 · 唤醒 · 控制</small>
                 </div>
-                <div className="control-reset">
-                  <button
-                    onClick={() => updateSettings(DEFAULT_SETTINGS)}
-                    title="恢复默认参数"
-                    aria-label="恢复默认参数"
-                    disabled={controlsLocked}
-                  >
-                    <RotateCcw size={13} />
-                  </button>
+                <div className="emotion-timeline" aria-label="十二阶段情绪轨迹">
+                  {COLLECTIVE_EMOTION_PLAN.trajectory.map((point) => (
+                    <i
+                      key={point.position}
+                      className={point.position <= currentEmotion.position ? "passed" : ""}
+                      style={{ left: `${point.position * 100}%` }}
+                      title={point.label}
+                    />
+                  ))}
                 </div>
                 <div className="print-actions">
                   {status === "ready" && (
@@ -876,7 +749,7 @@ export default function App() {
                         {isActive ? (
                           <Square size={12} />
                         ) : (
-                          <RotateCcw size={13} />
+                          <Play size={13} />
                         )}
                         {isActive ? "结束本次" : "再次打印"}
                       </button>
@@ -944,22 +817,6 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              {gestureEnabled && (
-                <GestureCamera
-                  status={status}
-                  suspended={
-                    !!selected || guideOpen || processOpen || nameOpen || webglError
-                  }
-                  onUpdate={applyGesture}
-                  onUnavailable={(message) => {
-                    if (status === "printing") {
-                      setStatus("paused");
-                      notify(message);
-                    }
-                  }}
-                  onClose={() => setGestureEnabled(false)}
-                />
-              )}
             </div>
 
             <section className="gallery-band">
@@ -1258,7 +1115,7 @@ export default function App() {
                   <span>
                     中断 <b>{event.interruption}%</b>
                   </span>
-                  {event.sag && <span>下垂</span>}
+                  {currentPottery.simulation?.version !== 3 && event.sag && <span>下垂</span>}
                 </div>
               ))}
             </div>
@@ -1290,28 +1147,25 @@ export default function App() {
             >
               <X size={19} />
             </IconButton>
-            <h2 id="guide-title">用双手塑形</h2>
+            <h2 id="guide-title">让集体记忆留下形状</h2>
             <ol className="guide-steps">
               <li>
-                <div className="guide-symbol"><Hand size={26} /><Hand size={26} /></div>
-                <div><h3>双手进入画面</h3><p>拇指与食指张合</p></div>
+                <div className="guide-symbol"><Sparkles size={26} /></div>
+                <div><h3>Agent 编排记忆</h3><p>1910 条匿名记忆被整理为十二段情绪轨迹</p></div>
               </li>
               <li>
-                <div className="guide-symbol guide-mapping"><span>左</span><span>右</span></div>
-                <div><h3>左手调波动，右手调中断</h3><p>张得越开，变化越强</p></div>
+                <div className="guide-symbol guide-mapping"><span>底</span><span>顶</span></div>
+                <div><h3>轨迹从底部走向顶部</h3><p>情绪只改变供料波动与中断；材料性质始终相同</p></div>
               </li>
               <li>
-                <div className="guide-symbol"><Hand size={26} /><Grab size={26} /></div>
-                <div><h3>双掌开始，双拳暂停</h3><p>保持 1 秒；双手离开 2 秒自动暂停</p></div>
+                <div className="guide-symbol"><Pause size={26} /><Play size={26} /></div>
+                <div><h3>系统自动打印</h3><p>创作参数不需手动控制；仍可暂停、继续或结束</p></div>
               </li>
             </ol>
-            <div className="guide-model-status"><HandModelStatus state={model} /></div>
+            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote}</p>
             <div className="guide-actions">
-              <button className="primary-button" onClick={() => { closeGuide(); setGestureEnabled(true); }}>
-                <Camera size={17} />开启手势
-              </button>
-              <button className="text-button" onClick={() => { closeGuide(); setGestureEnabled(false); }}>
-                <MousePointer2 size={15} />使用鼠标
+              <button className="primary-button" onClick={closeGuide}>
+                <Check size={17} />进入工坊
               </button>
             </div>
           </section>

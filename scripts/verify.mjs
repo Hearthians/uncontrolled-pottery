@@ -130,24 +130,9 @@ try {
       "rotation should change canvas pixels",
     );
     await page.getByRole("button", { name: "自动旋转", exact: true }).click();
-    const flowSlider = page.getByRole("slider", { name: "供料波动" });
-    const sliderBounds = await flowSlider.boundingBox();
-    assert.ok(
-      sliderBounds.height >= 22,
-      "slider has an accessible pointer target",
-    );
-    await page.mouse.click(
-      sliderBounds.x + 6 + (sliderBounds.width - 12) * 0.9,
-      sliderBounds.y + sliderBounds.height / 2,
-    );
-    assert.equal(await flowSlider.inputValue(), "90");
+    assert.equal(await page.getByRole("slider").count(), 0, "manual sliders are removed");
+    await page.getByRole("button", { name: "从工作台开始打印" }).click();
     await page.getByRole("button", { name: "暂停打印" }).waitFor();
-    assert.equal(
-      await page.getByRole("button", { name: "从工作台开始打印" }).count(),
-      0,
-      "first slider interaction starts a new print",
-    );
-    await page.getByRole("slider", { name: "供料中断" }).fill("40");
     await page.waitForTimeout(11000);
     await page.screenshot({ path: "artifacts/printing.png", fullPage: true });
     await page.getByRole("button", { name: "暂停打印" }).click();
@@ -158,12 +143,9 @@ try {
       paused,
       "pause must stop deposition",
     );
-    await page.getByRole("slider", { name: "供料波动" }).fill("8");
-    await page.getByRole("slider", { name: "供料中断" }).fill("0");
-    await page.getByRole("switch", { name: "局部下垂" }).click();
     await page.getByRole("button", { name: "继续打印" }).click();
     log(
-      "Live supply changes and pause/resume verified; waiting for 55-second completion.",
+      "Automatic emotion trajectory and pause/resume verified; waiting for 55-second completion.",
     );
     await page
       .getByRole("button", { name: "收藏这件作品" })
@@ -179,23 +161,24 @@ try {
     );
     assert.equal(stored.length, 1);
     assert.equal(stored[0].steps, 10240);
-    assert.ok(stored[0].events.length >= 2);
-    assert.ok(
-      stored[0].events.some(
-        (event) => event.fluctuation === 90 && event.interruption === 40,
-      ),
-    );
-    assert.ok(stored[0].events.at(-1).fluctuation === 8);
+    assert.equal(stored[0].events.length, 64);
+    assert.equal(stored[0].emotionPlan.memoryCount, 1910);
+    assert.equal(stored[0].emotionPlan.mappingVersion, "emotion-behavior-2");
+    assert.ok(stored[0].events.every((event) => event.sag === true), "emotion changes supply, not material behavior");
+    assert.ok(stored[0].events.some((event) => event.interruption > 40));
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "导出记录", exact: true }).click();
     const download = await downloadPromise;
     const exported = JSON.parse(await readFile(await download.path(), "utf8"));
     assert.equal(exported.pottery.id, stored[0].id);
-    assert.equal(exported.version, 2);
-    assert.equal(stored[0].simulation.version, 2);
+    assert.equal(exported.version, 3);
+    assert.equal(stored[0].simulation.version, 3);
+    assert.equal(exported.simulation.id, "pneumatic-clay-plastic-1");
+    assert.equal(exported.simulation.material, "viscoplastic-strand-prototype");
+    assert.equal(exported.simulation.id, stored[0].simulation.profile);
     assert.ok(Array.isArray(stored[0].simulation.pulses));
     log(
-      `Completed and collected ${stored[0].steps} deposition steps; export contains ${stored[0].events.length} process events.`,
+      `V3 prototype completed and collected ${stored[0].steps} deposition steps; export contains ${stored[0].events.length} supply events and matching profile metadata.`,
     );
 
     await page.reload({ waitUntil: "networkidle" });
@@ -205,6 +188,7 @@ try {
       .click();
     await page.locator(".detail-scene canvas").waitFor();
     await page.locator('.detail-scene .clay-scene[data-render-state="ready"]').waitFor();
+    assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), "3");
     const detail = await canvasStats(page, ".detail-scene canvas");
     assert.ok(detail.max - detail.min > 40);
     await page.screenshot({
@@ -260,7 +244,6 @@ try {
     });
     if (width === 390) {
       await mobile.getByRole("button", { name: "从工作台开始打印" }).click();
-      await mobile.getByRole("slider", { name: "供料中断" }).fill("70");
       await mobile.waitForTimeout(1800);
       await mobile.getByRole("button", { name: "暂停打印" }).click();
       await mobile.getByRole("button", { name: "结束本次" }).click();

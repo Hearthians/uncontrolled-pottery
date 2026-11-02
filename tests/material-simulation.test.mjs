@@ -101,7 +101,7 @@ test("legacy collections keep their original geometry and unknown material versi
     assert.equal(isPottery(pottery), true);
     assert.deepEqual(generateDeposits(pottery), legacyDeposits(pottery));
   }
-  assert.equal(isPottery({ ...PRESETS[0], simulation: { ...PRESETS[0].simulation, version: 3 } }), false);
+  assert.equal(isPottery({ ...PRESETS[0], simulation: { ...PRESETS[0].simulation, version: 99 } }), false);
   assert.equal(isPottery({ ...PRESETS[0], simulation: { ...PRESETS[0].simulation, ticks: -1 } }), false);
   assert.equal(isPottery({ ...PRESETS[0], simulation: { ...PRESETS[0].simulation, stopStep: 12 } }), false);
   assert.equal(isPottery({ ...PRESETS[0], simulation: { ...PRESETS[0].simulation, pulses: [{ start: 300, end: 10 }] } }), false);

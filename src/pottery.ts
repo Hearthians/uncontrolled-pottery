@@ -6,19 +6,26 @@ import {
 import type { Pottery as LegacyPottery } from "./simulation.ts";
 import { MaterialSimulation, MATERIAL_PROFILE, MATERIAL_TICKS, RUNOUT_STEPS, validMaterialRecord } from "./materialSimulation.ts";
 import type { MaterialRecord } from "./materialSimulation.ts";
+import { PlasticSimulation, validPlasticRecord } from "./plasticSimulation.ts";
+import type { PlasticRecord } from "./plasticSimulation.ts";
 import type { Deposit } from "./simulation.ts";
+import { isEmotionPlan } from "./emotionTrajectory.ts";
+import type { EmotionPlan } from "./emotionTrajectory.ts";
 
 export { DURATION, LAYERS, SEGMENTS, TOTAL_STEPS, meanSettings } from "./simulation.ts";
 export type { Settings, ProcessEvent } from "./simulation.ts";
-export type Pottery = LegacyPottery & { simulation?: MaterialRecord };
-export type SceneDeposit = Deposit & { halfHeight?: number };
+export type Pottery = LegacyPottery & { simulation?: MaterialRecord | PlasticRecord; emotionPlan?: EmotionPlan };
+export type SceneDeposit = Deposit & { halfHeight?: number; breakBefore?: boolean };
 export const DEFAULT_SETTINGS = { fluctuation: 0, interruption: 0, sag: true };
 
 export function isPottery(value: unknown): value is Pottery {
   try {
     if (!isLegacyPottery(value)) return false;
     const pottery = value as Pottery;
-    return pottery.simulation === undefined || validMaterialRecord(pottery.simulation, pottery.steps);
+    return (pottery.simulation === undefined ||
+      validMaterialRecord(pottery.simulation, pottery.steps) ||
+      validPlasticRecord(pottery.simulation, pottery.steps)) &&
+      (pottery.emotionPlan === undefined || isEmotionPlan(pottery.emotionPlan));
   } catch {
     return false;
   }
@@ -26,7 +33,9 @@ export function isPottery(value: unknown): value is Pottery {
 
 export function generateDeposits(pottery: Pottery): SceneDeposit[] {
   if (!pottery.simulation) return generateLegacyDeposits(pottery);
-  const simulation = new MaterialSimulation(pottery.seed, pottery.simulation);
+  const simulation = pottery.simulation.version === 3
+    ? new PlasticSimulation(pottery.seed, pottery.simulation)
+    : new MaterialSimulation(pottery.seed, pottery.simulation);
   simulation.advanceTo(pottery.simulation.ticks, pottery.events);
   return simulation.deposits;
 }

@@ -1,7 +1,7 @@
 {
   "name": "uncontrolled-pottery",
   "private": true,
-  "version": "1.1.0-preview.1",
+  "version": "1.2.0-preview.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,13 +12,10 @@
     "public:status": "node scripts/public-forward.mjs status",
     "test": "node --test tests/*.test.mjs",
     "verify:browser": "node scripts/verify.mjs",
-    "verify:gestures": "node scripts/verify-gestures.mjs",
-    "verify:loading": "node scripts/verify-loading.mjs",
     "verify:material": "node scripts/verify-material.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^0.10.32",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

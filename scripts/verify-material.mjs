@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { PRESETS as LEGACY_PRESETS } from "../src/simulation.ts";
 import { createArchive } from "../src/archive.ts";
-import { plannedNozzle } from "../src/materialSimulation.ts";
+import { MATERIAL_PROFILE, plannedNozzle } from "../src/materialSimulation.ts";
+import { PLASTIC_PROFILE } from "../src/plasticSimulation.ts";
+import { PRESETS } from "../src/pottery.ts";
+import { emotionAtStep, emotionPlanToEvents } from "../src/emotionTrajectory.ts";
 
 await mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({
@@ -27,8 +30,7 @@ try {
   await page.goto(`${baseUrl}${baseUrl.includes("?") ? "&" : "?"}profile=1`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "关闭引导", exact: true }).click();
   await page.getByRole("button", { name: "从工作台开始打印" }).click();
-  await page.getByRole("slider", { name: "供料波动" }).fill("95");
-  await page.getByRole("slider", { name: "供料中断" }).fill("65");
+  assert.equal(await page.getByRole("slider").count(), 0, "supply follows the emotion plan without manual sliders");
   await page.waitForTimeout(4500);
   await page.getByRole("button", { name: "暂停打印" }).click();
   const initialNodes = await nodes(page);
@@ -54,7 +56,8 @@ try {
   }));
   const planned = plannedNozzle(finalNodes);
   for (const axis of ["x", "y", "z"]) assert.ok(Math.abs(pose[axis] - planned[axis]) < 0.00002);
-  log("Fixed nozzle path and repeated pause/gallery/resume reconstruction verified.");
+  assert.equal(await page.locator(".emotion-stage h3").textContent(), emotionAtStep(finalNodes - 1).label);
+  log("V3 fixed nozzle path, original-plan emotion progress, and repeated pause/gallery/resume reconstruction verified.");
 
   const timings = await page.evaluate(() => {
     const stats = (name) => {
@@ -70,15 +73,24 @@ try {
 
   await page.getByRole("button", { name: "结束本次", exact: true }).click();
   await page.getByRole("button", { name: "收藏这件作品", exact: true }).click();
-  await page.getByLabel("作品名称").fill("材料回放测试");
+  await page.getByLabel("作品名称").fill("V3 泥条回放测试");
   await page.getByRole("button", { name: "加入作品画廊", exact: true }).click();
   const recorded = await page.evaluate(() => JSON.parse(localStorage.getItem("uncontrolled-pottery-v1"))[0]);
-  assert.equal(recorded.simulation.version, 2);
-  assert.ok(recorded.simulation.pulses.length > 0);
+  assert.equal(recorded.simulation.version, 3);
+  assert.equal(recorded.simulation.profile, PLASTIC_PROFILE.id);
+  assert.ok(Array.isArray(recorded.simulation.pulses));
+  assert.deepEqual(recorded.events, emotionPlanToEvents(recorded.emotionPlan));
+  assert.equal(recorded.emotionPlan.mappingVersion, "emotion-behavior-2");
+  const stoppedEmotion = emotionAtStep(recorded.steps - 1, recorded.emotionPlan);
+  assert.ok(stoppedEmotion.position < 0.5, "early stop cannot traverse the remaining emotion arc");
+  assert.equal(await page.locator(".emotion-stage h3").textContent(), stoppedEmotion.label);
+  log(`V3 early stop saved ${recorded.steps} nodes and ${recorded.simulation.pulses.length} supply pulses; material properties stay fixed.`);
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出记录", exact: true }).click();
   const exported = JSON.parse(await readFile(await (await downloadEvent).path(), "utf8"));
-  assert.equal(exported.version, 2);
+  assert.equal(exported.version, 3);
+  assert.equal(exported.simulation.id, PLASTIC_PROFILE.id);
+  assert.equal(exported.simulation.material, PLASTIC_PROFILE.material);
   assert.ok(exported.simulation.playbackRate > 1);
 
   await page.evaluate(() => localStorage.removeItem("uncontrolled-pottery-v1"));
@@ -88,22 +100,43 @@ try {
   await ready(page, ".detail-scene");
   const restored = await page.evaluate(() => JSON.parse(localStorage.getItem("uncontrolled-pottery-v1"))[0]);
   assert.deepEqual(restored, { ...recorded, preset: false });
+  assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), "3");
   await page.screenshot({ path: "artifacts/material-reimport.png", fullPage: true });
   await page.getByRole("button", { name: "关闭作品", exact: true }).click();
-  const legacy = { ...LEGACY_PRESETS[0], id: "legacy-roundtrip", title: "旧版兼容测试" };
-  await upload(page, createArchive(legacy));
-  await ready(page, ".detail-scene");
-  assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), "1");
-  await page.getByRole("button", { name: "关闭作品", exact: true }).click();
-  await upload(page, { ...exported, version: 999 });
-  await page.getByRole("status").filter({ hasText: "无法导入" }).waitFor();
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("uncontrolled-pottery-v1")).length), 2);
+  const material = { ...PRESETS[0], id: "material-v2-roundtrip", title: "V2 材料兼容测试" };
+  const legacy = { ...LEGACY_PRESETS[0], id: "legacy-roundtrip", title: "V1 旧版兼容测试" };
+  for (const pottery of [material, legacy]) {
+    const archive = createArchive(pottery);
+    await upload(page, archive);
+    await ready(page, ".detail-scene");
+    assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), String(archive.version));
+    const imported = await page.evaluate(() => JSON.parse(localStorage.getItem("uncontrolled-pottery-v1"))[0]);
+    assert.deepEqual(imported, { ...pottery, preset: false }, "legacy process data must not migrate");
+    const legacyDownload = page.waitForEvent("download");
+    await page.getByRole("button", { name: "导出作品记录", exact: true }).click();
+    const reexported = JSON.parse(await readFile(await (await legacyDownload).path(), "utf8"));
+    assert.equal(reexported.version, archive.version);
+    assert.deepEqual(reexported.simulation, archive.simulation);
+    assert.deepEqual(reexported.pottery, imported);
+    await page.getByRole("button", { name: "关闭作品", exact: true }).click();
+  }
+  for (const invalid of [
+    { ...exported, version: 99 },
+    { ...exported, version: 2 },
+    { ...exported, simulation: { ...exported.simulation, id: MATERIAL_PROFILE.id } },
+  ]) {
+    const importError = page.getByRole("status").filter({ hasText: "无法导入" });
+    await importError.waitFor({ state: "hidden" });
+    await upload(page, invalid);
+    await importError.waitFor();
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("uncontrolled-pottery-v1")).length), 3);
+  }
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "作品画廊", exact: true }).click();
-  await page.getByRole("button", { name: "查看作品：材料回放测试" }).click();
+  await page.getByRole("button", { name: "查看作品：V3 泥条回放测试" }).click();
   await ready(page, ".detail-scene");
-  assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), "2");
-  log("V2 export/import/reload and V1 import verified; unknown versions leave collection intact.");
+  assert.equal(await page.locator(".detail-scene .clay-scene").getAttribute("data-engine"), "3");
+  log("V3 export/import/reload plus unchanged V2/V1 import/re-export verified; version/profile mismatches leave collection intact.");
   assert.deepEqual(errors, []);
   await writeFile("artifacts/material-performance.json", `${JSON.stringify(report, null, 2)}\n`);
   log("All material browser checks passed.");
