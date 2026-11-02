@@ -1,10 +1,10 @@
 {
   "name": "uncontrolled-pottery",
   "private": true,
-  "version": "1.2.0-preview.2",
+  "version": "1.2.0-preview.3",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "build:public": "tsc -b && vite build --base=/pottery/ --outDir=dist-public",
     "public:start": "node scripts/public-forward.mjs start",
@@ -13,6 +13,10 @@
     "test": "node --test tests/*.test.mjs",
     "verify:browser": "node scripts/verify.mjs",
     "verify:material": "node scripts/verify-material.mjs",
+    "verify:memories": "node scripts/verify-memories.mjs",
+    "verify:lab": "node scripts/verify-deposition-lab.mjs",
+    "verify:heightfield": "node scripts/verify-heightfield.mjs",
+    "verify:default-memories": "node scripts/verify-default-memories.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {

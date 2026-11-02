@@ -1,0 +1,10 @@
+.physics-choice { display: inline-flex; align-items: center; gap: 8px; color: #596659; font-size: 11px; }
+.physics-choice select { max-width: 200px; padding: 7px 25px 7px 9px; border: 1px solid var(--line); border-radius: 3px; font: inherit; color: #29372f; background-color: #fdfefb; }
+.physics-choice select:disabled { opacity: .65; }
+.physics-choice select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.physics-note { position: absolute; top: 66px; left: 24px; right: 55px; pointer-events: none; color: #465140; font-size: 10px; line-height: 1.5; }
+@media (max-width: 680px) {
+  .physics-choice { gap: 5px; font-size: 10px; }
+  .physics-choice select { max-width: 165px; padding-left: 6px; }
+  .physics-note { top: 50px; left: 16px; right: 16px; font-size: 9px; }
+}

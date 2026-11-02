@@ -5,6 +5,8 @@ import { DURATION, PRESETS as LEGACY_PRESETS, generateDeposits as legacyDeposits
 import { PRESETS, generateDeposits, isPottery } from "../src/pottery.ts";
 import { MaterialSimulation, MATERIAL_PROFILE, MATERIAL_TICKS } from "../src/materialSimulation.ts";
 import { PlasticSimulation, PLASTIC_PROFILE } from "../src/plasticSimulation.ts";
+import { HeightfieldSimulation, HEIGHTFIELD_PROFILE } from "../src/heightfieldSimulation.ts";
+import { generateMaterial } from "../src/pottery.ts";
 import { COLLECTIVE_EMOTION_PLAN, emotionPlanToEvents } from "../src/emotionTrajectory.ts";
 
 function plasticFixture() {
@@ -60,6 +62,33 @@ test("v3 archive replay preserves stopped geometry, supply history, and emotion 
   assert.deepEqual(restored.simulation.pulses, simulation.record().pulses);
   assert.deepEqual(restored.emotionPlan, COLLECTIVE_EMOTION_PLAN);
   assert.equal(restored.emotionPlan.mappingVersion, "emotion-behavior-2");
+});
+
+test("v4 archive retains the experimental field, original plan and strict model metadata", () => {
+  const events = emotionPlanToEvents();
+  const engine = new HeightfieldSimulation(91);
+  engine.advanceTo(320, events);
+  engine.stop();
+  engine.advanceTo(MATERIAL_TICKS, events);
+  const pottery = { ...LEGACY_PRESETS[0], id: "heightfield-roundtrip", title: "Field study",
+    seed: 91, events, steps: engine.deposits.length, duration: engine.tick / MATERIAL_TICKS * DURATION,
+    simulation: engine.record(), emotionPlan: structuredClone(COLLECTIVE_EMOTION_PLAN) };
+  assert.equal(isPottery(pottery), true);
+  const archive = createArchive(pottery);
+  assert.equal(archive.version, 4);
+  for (const [key, value] of Object.entries(HEIGHTFIELD_PROFILE)) assert.deepEqual(archive.simulation[key], value);
+  const restored = parseArchive(JSON.stringify(archive));
+  assert.deepEqual(restored, { ...pottery, preset: false });
+  const replay = generateMaterial(restored);
+  assert.deepEqual(replay.surface.height, engine.surface.height);
+  assert.deepEqual(replay.deposits, engine.deposits);
+  assert.deepEqual(replay.nozzle, engine.nozzle);
+  for (const invalid of [
+    { ...archive, version: 3 },
+    { ...archive, simulation: { ...archive.simulation, id: PLASTIC_PROFILE.id } },
+    { ...archive, simulation: { ...archive.simulation, cellMm: 1 } },
+    { ...archive, pottery: { ...pottery, simulation: { ...pottery.simulation, profile: PLASTIC_PROFILE.id } } },
+  ]) assert.throws(() => parseArchive(JSON.stringify(invalid)));
 });
 
 test("v1 and v2 archive dispatch retains exact original geometry without migrating presets", () => {

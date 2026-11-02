@@ -1,4 +1,5 @@
 import { chromium } from "@playwright/test";
+import { mockDefaultMemories } from "./memory-fixture.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { PRESETS as LEGACY_PRESETS } from "../src/simulation.ts";
@@ -26,9 +27,11 @@ const upload = (page, data) => page.getByLabel("Work archive file").setInputFile
 
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockDefaultMemories(page.context());
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${baseUrl}${baseUrl.includes("?") ? "&" : "?"}profile=1`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Close guide", exact: true }).click();
+  const closeGuide = page.getByRole("button", { name: "Close guide", exact: true });
+  if (await closeGuide.count()) await closeGuide.click();
   await page.getByRole("button", { name: "Start printing from the workbench" }).click();
   assert.equal(await page.getByRole("slider").count(), 0, "supply follows the emotion plan without manual sliders");
   await page.waitForTimeout(4500);
@@ -56,7 +59,7 @@ try {
   }));
   const planned = plannedNozzle(finalNodes);
   for (const axis of ["x", "y", "z"]) assert.ok(Math.abs(pose[axis] - planned[axis]) < 0.00002);
-  assert.equal(await page.locator(".emotion-stage h3").textContent(), emotionAtStep(finalNodes - 1).label);
+  assert.equal(await page.locator(".memory-active .emotion-stage h3").textContent(), emotionAtStep(finalNodes - 1).label);
   log("V3 fixed nozzle path, original-plan emotion progress, and repeated pause/gallery/resume reconstruction verified.");
 
   const timings = await page.evaluate(() => {
@@ -83,7 +86,7 @@ try {
   assert.equal(recorded.emotionPlan.mappingVersion, "emotion-behavior-2");
   const stoppedEmotion = emotionAtStep(recorded.steps - 1, recorded.emotionPlan);
   assert.ok(stoppedEmotion.position < 0.5, "early stop cannot traverse the remaining emotion arc");
-  assert.equal(await page.locator(".emotion-stage h3").textContent(), stoppedEmotion.label);
+  assert.equal(await page.locator(".memory-active .emotion-stage h3").textContent(), stoppedEmotion.label);
   log(`V3 early stop saved ${recorded.steps} nodes and ${recorded.simulation.pulses.length} supply pulses; material properties stay fixed.`);
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export record", exact: true }).click();

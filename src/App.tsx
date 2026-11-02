@@ -11,6 +11,7 @@ import {
   Expand,
   Eye,
   EyeOff,
+  FlaskConical,
   GalleryHorizontalEnd,
   Layers3,
   Maximize2,
@@ -38,17 +39,20 @@ import {
 import type { Pottery } from "./pottery";
 import { MATERIAL_TICKS } from "./materialSimulation";
 import { PlasticSimulation } from "./plasticSimulation";
+import { HeightfieldSimulation } from "./heightfieldSimulation";
+import "./studioPhysics.css";
 import {
   COLLECTIVE_EMOTION_PLAN,
   emotionAtStep,
   emotionPlanToEvents,
 } from "./emotionTrajectory";
 import { createArchive, MAX_ARCHIVE_BYTES, parseArchive } from "./archive";
+import { MemoryPlayback } from "./MemoryPlayback";
+import { useMemorySource } from "./useMemorySource";
 
 type Status = "ready" | "printing" | "paused" | "complete";
 type Page = "studio" | "gallery";
 const STORAGE_KEY = "uncontrolled-pottery-v1";
-const GUIDE_KEY = "uncontrolled-pottery-guide-v1";
 const thumbnailCache = new Map<string, string>();
 
 function readCollection(): Pottery[] {
@@ -216,8 +220,15 @@ export default function App() {
   const initialEmotion = COLLECTIVE_EMOTION_PLAN.trajectory[0];
   const [page, setPage] = useState<Page>("studio");
   const [status, setStatus] = useState<Status>("ready");
+  const [physics, setPhysics] = useState<"strand" | "heightfield">(
+    new URLSearchParams(location.search).get("physics") === "heightfield" ? "heightfield" : "strand",
+  );
   const [currentEmotion, setCurrentEmotion] = useState(initialEmotion);
   const [progress, setProgress] = useState(0);
+  const [depositedSteps, setDepositedSteps] = useState(0);
+  // Session-only text survives studio/gallery navigation, never enters a work record.
+  const memorySource = useMemorySource(status === "printing" || status === "paused");
+  const { memories, canStart: canStartPrint } = memorySource;
   const [planned, setPlanned] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [view, setView] = useState<"perspective" | "front" | "top">(
@@ -226,10 +237,7 @@ export default function App() {
   const [viewMenu, setViewMenu] = useState(false);
   const [collection, setCollection] = useState<Pottery[]>(readCollection);
   const [selected, setSelected] = useState<Pottery | null>(null);
-  const [guideOpen, setGuideOpen] = useState(() => {
-    try { return localStorage.getItem(GUIDE_KEY) !== "seen"; }
-    catch { return true; }
-  });
+  const [guideOpen, setGuideOpen] = useState(false);
   const [processOpen, setProcessOpen] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
   const [workName, setWorkName] = useState("");
@@ -244,7 +252,7 @@ export default function App() {
   const profileRef = useRef(new URLSearchParams(location.search).has("profile"));
   const runRef = useRef<{
     pottery: Pottery;
-    engine: PlasticSimulation;
+    engine: PlasticSimulation | HeightfieldSimulation;
     elapsed: number;
   } | null>(null);
   const allWorks = [...collection, ...PRESETS];
@@ -256,7 +264,6 @@ export default function App() {
   const notify = (message: string) => setNotice(message);
   function closeGuide() {
     setGuideOpen(false);
-    try { localStorage.setItem(GUIDE_KEY, "seen"); } catch {}
   }
   useEffect(() => {
     if (notice) {
@@ -323,7 +330,8 @@ export default function App() {
       // Neither early-stop runout nor settling should fast-forward the emotion arc.
       const emotion = emotionAtStep(Math.max(0, engine.deposits.length - 1), run.pottery.emotionPlan);
       const simulated = profileRef.current ? performance.now() : 0;
-      sceneRef.current?.append(engine.deposits, engine.dirtyStart, engine.nozzle);
+      sceneRef.current?.append(engine.deposits, engine.dirtyStart, engine.nozzle,
+        engine instanceof HeightfieldSimulation ? engine.surface : undefined);
       if (profileRef.current) {
         const end = performance.now();
         performance.measure("pottery:simulation", { start: started, end: simulated });
@@ -335,6 +343,7 @@ export default function App() {
       run.pottery.duration = engine.tick / MATERIAL_TICKS * DURATION;
       if (now - uiTime > 70 || engine.complete) {
         setProgress(engine.tick / MATERIAL_TICKS);
+        setDepositedSteps(engine.deposits.length);
         setCurrentEmotion(emotion);
         uiTime = now;
       }
@@ -348,8 +357,9 @@ export default function App() {
   }, [status]);
 
   function startPrint() {
+    if (!memorySource.source.canStart) return;
     const seed = Math.floor(Math.random() * 100000);
-    const engine = new PlasticSimulation(seed);
+    const engine = physics === "heightfield" ? new HeightfieldSimulation(seed) : new PlasticSimulation(seed);
     const events = emotionPlanToEvents();
     setCurrentEmotion(COLLECTIVE_EMOTION_PLAN.trajectory[0]);
     const pottery: Pottery = {
@@ -368,11 +378,17 @@ export default function App() {
     };
     runRef.current = { pottery, engine, elapsed: 0 };
     setProgress(0);
+    setDepositedSteps(0);
     setSavedId(null);
     setAutoRotate(false);
     setView("perspective");
-    sceneRef.current?.reset();
+    sceneRef.current?.reset(engine.record().version);
     setStatus("printing");
+  }
+
+  function pausePrint() {
+    setDepositedSteps(runRef.current?.engine.deposits.length ?? 0);
+    setStatus("paused");
   }
 
   function finishPrint() {
@@ -456,7 +472,7 @@ export default function App() {
   }
 
   function changePage(next: Page) {
-    if (next === "gallery" && status === "printing") setStatus("paused");
+    if (next === "gallery" && status === "printing") pausePrint();
     setPage(next);
     setGalleryFilter("all");
   }
@@ -508,10 +524,22 @@ export default function App() {
             <AudioLines size={22} strokeWidth={1.5} />
             <span>History</span>
           </button>
+          <a
+            className="rail-item lab-link"
+            href={`${location.pathname}?lab=deposition`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open physics lab in a new tab"
+            title="Physics lab · opens a new tab"
+            onClick={() => { if (status === "printing") pausePrint(); }}
+          >
+            <FlaskConical size={22} strokeWidth={1.5} />
+            <span>Lab</span>
+          </a>
         </div>
         <div className="rail-bottom">
           <IconButton label="How it works" onClick={() => {
-            if (status === "printing") setStatus("paused");
+            if (status === "printing") pausePrint();
             setGuideOpen(true);
           }}>
             <CircleHelp size={21} strokeWidth={1.5} />
@@ -528,7 +556,7 @@ export default function App() {
           </button>
           <div className="topbar-tools">
             <IconButton label="How it works" onClick={() => {
-              if (status === "printing") setStatus("paused");
+              if (status === "printing") pausePrint();
               setGuideOpen(true);
             }}>
               <CircleHelp size={18} />
@@ -543,9 +571,14 @@ export default function App() {
                 <h1>Print studio</h1>
               </div>
               <div className="heading-actions">
-                <span className="session-label">
-                  {COLLECTIVE_EMOTION_PLAN.memoryCount} collective memories
-                </span>
+                <label className="physics-choice">
+                  <span>{status === "complete" ? "Next print" : "Physics"}</span>
+                  <select aria-label="Print physics model" value={physics} disabled={isActive}
+                    onChange={(event) => setPhysics(event.target.value as "strand" | "heightfield")}>
+                    <option value="strand">Strand · original</option>
+                    <option value="heightfield">Height field · test</option>
+                  </select>
+                </label>
               </div>
             </div>
             <div
@@ -579,6 +612,9 @@ export default function App() {
                     <Expand size={18} />
                   </IconButton>
                 </div>
+                {(currentPottery.simulation?.version === 4 || status === "ready" && physics === "heightfield") && (
+                  <p className="physics-note">{status === "ready" ? "Next print: " : ""}Experimental height field · no overhangs or fracture</p>
+                )}
                 {webglError && (
                   <div className="webgl-error">
                     <Box size={30} />
@@ -590,6 +626,8 @@ export default function App() {
                   <button
                     className="scene-start-button"
                     aria-label="Start printing from the workbench"
+                    disabled={!canStartPrint}
+                    aria-describedby={!canStartPrint ? "memory-start-note" : undefined}
                     onClick={startPrint}
                   >
                     <Play size={16} fill="currentColor" />
@@ -659,42 +697,25 @@ export default function App() {
                 </div>
               </section>
 
-              <aside className="control-panel emotion-panel">
-                <div className="panel-heading">
-                  <div>
-                    <Sparkles size={17} />
-                    <h2>Memory arc</h2>
-                  </div>
-                  <span>AGENT DIRECTED</span>
-                </div>
-                <div className="emotion-plan-copy">
-                  <span>{COLLECTIVE_EMOTION_PLAN.memoryCount} collective memories</span>
-                  <h3>{COLLECTIVE_EMOTION_PLAN.title}</h3>
-                  <p>{COLLECTIVE_EMOTION_PLAN.summary}</p>
-                </div>
-                <div className="emotion-stage" aria-live="polite">
-                  <span>{status === "ready" ? "Opening stage" : "Current emotion"}</span>
-                  <h3>{currentEmotion.label}</h3>
-                  <div>
-                    <i style={{ "--emotion-value": `${(currentEmotion.valence + 1) * 50}%` } as React.CSSProperties} />
-                    <i style={{ "--emotion-value": `${currentEmotion.arousal * 100}%` } as React.CSSProperties} />
-                    <i style={{ "--emotion-value": `${currentEmotion.dominance * 100}%` } as React.CSSProperties} />
-                  </div>
-                  <small>Valence · Arousal · Control</small>
-                </div>
-                <div className="emotion-timeline" aria-label="Twelve-stage emotion arc">
-                  {COLLECTIVE_EMOTION_PLAN.trajectory.map((point) => (
-                    <i
-                      key={point.position}
-                      className={point.position <= currentEmotion.position ? "passed" : ""}
-                      style={{ left: `${point.position * 100}%` }}
-                      title={point.label}
-                    />
-                  ))}
+              <aside className={`control-panel emotion-panel memory-panel${memories.length ? " has-memories" : ""}`}>
+                <div className="memory-panel-scroll">
+                  <MemoryPlayback
+                    key={runRef.current?.pottery.id ?? "preview"}
+                    memories={memories}
+                    emotion={currentEmotion.label}
+                    sourceState={memorySource}
+                    source={memorySource.source}
+                    depositedSteps={depositedSteps}
+                    totalSteps={TOTAL_STEPS}
+                    status={status}
+                  />
                 </div>
                 <div className="print-actions">
+                  {!canStartPrint && !isActive && <p id="memory-start-note" className="memory-start-note">
+                    {memorySource.phase === "loading" ? "Loading memories before printing…" : "Load memories to start printing."}
+                  </p>}
                   {status === "ready" && (
-                    <button className="primary-button" onClick={startPrint}>
+                    <button className="primary-button" onClick={startPrint} disabled={!canStartPrint} aria-describedby={!canStartPrint ? "memory-start-note" : undefined}>
                       <Play size={17} fill="currentColor" />
                       <span>Start print</span>
                       <span className="button-time">55 s</span>
@@ -703,7 +724,7 @@ export default function App() {
                   {status === "printing" && (
                     <button
                       className="primary-button"
-                      onClick={() => setStatus("paused")}
+                      onClick={pausePrint}
                     >
                       <Pause size={17} fill="currentColor" />
                       <span>Pause print</span>
@@ -741,6 +762,8 @@ export default function App() {
                   <div className="secondary-actions">
                     {status !== "ready" && (
                       <button
+                        disabled={!isActive && !canStartPrint}
+                        aria-describedby={!isActive && !canStartPrint ? "memory-start-note" : undefined}
                         onClick={() => {
                           if (isActive) finishPrint();
                           else startPrint();
@@ -786,8 +809,7 @@ export default function App() {
                 <div className="monitor-progress">
                   <div>
                     <span>
-                      Print progress{" "}
-                      <b>
+                      <b aria-label="Print progress">
                         {Math.floor(progress * 100)}
                         <small>%</small>
                       </b>
@@ -999,6 +1021,8 @@ export default function App() {
                 <b>Cylinder</b>
                 <span>Material</span>
                 <b>Gray-white wet clay</b>
+                <span>Physics</span>
+                <b>{selected.simulation?.version === 4 ? "V4 · experimental height field" : `V${selected.simulation?.version ?? 1} · strand`}</b>
                 <span>Process events</span>
                 <b>{selected.events.length}</b>
               </div>
@@ -1115,7 +1139,7 @@ export default function App() {
                   <span>
                     Interruption <b>{event.interruption}%</b>
                   </span>
-                  {currentPottery.simulation?.version !== 3 && event.sag && <span>Sag</span>}
+                  {(currentPottery.simulation?.version ?? 1) < 3 && event.sag && <span>Sag</span>}
                 </div>
               ))}
             </div>
@@ -1147,7 +1171,8 @@ export default function App() {
             >
               <X size={19} />
             </IconButton>
-            <h2 id="guide-title">Give collective memory a form</h2>
+            <h2 id="guide-title">Memory, into clay.</h2>
+            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.summary}</p>
             <ol className="guide-steps">
               <li>
                 <div className="guide-symbol"><Sparkles size={26} /></div>
@@ -1162,7 +1187,7 @@ export default function App() {
                 <div><h3>Automatic printing</h3><p>No manual parameter controls. You can still pause, resume, or finish early.</p></div>
               </li>
             </ol>
-            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote} V3 is an uncalibrated material preview.</p>
+            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote} Both physics modes are uncalibrated. The original strand model is V3. Experimental V4 adapts the Lab’s volume-conserving height field to the circular path: pressure spreads clay on a flat substrate, but it cannot represent overhangs, internal voids, fracture, or realistic layer grooves. A tall vessel exceeds its shallow-layer assumptions. Choose before printing; saved works retain their model.</p>
             <div className="guide-actions">
               <button className="primary-button" onClick={closeGuide}>
                 <Check size={17} />Enter studio

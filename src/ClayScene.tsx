@@ -9,8 +9,10 @@ import {
   TOTAL_STEPS,
 } from "./simulation";
 import type { Pottery, SceneDeposit } from "./pottery";
+import { BASE_TOP, MATERIAL_PROFILE } from "./materialSimulation";
 import type { NozzlePose } from "./materialSimulation";
-import { loadDeposits } from "./depositLoader";
+import type { HeightfieldSurface } from "./heightfieldSimulation";
+import { loadMaterial } from "./depositLoader";
 
 const SIDES = 8;
 const VERTICES = SIDES + 2;
@@ -26,8 +28,8 @@ const RADIAL = Array.from({ length: MAX_NODES }, (_, i) => ({
 }));
 
 export interface SceneHandle {
-  reset: () => void;
-  append: (deposits: SceneDeposit[], start: number, nozzle?: NozzlePose) => void;
+  reset: (version?: number) => void;
+  append: (deposits: SceneDeposit[], start: number, nozzle?: NozzlePose, surface?: HeightfieldSurface) => void;
   display: (pottery: Pottery) => void;
   capture: () => string;
   resetView: () => void;
@@ -51,6 +53,7 @@ interface World {
   camera: THREE.OrthographicCamera;
   controls: OrbitControls;
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  fieldMesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
   ghost: THREE.Group;
   head: THREE.Group;
   stream: THREE.Mesh;
@@ -68,6 +71,9 @@ interface World {
 }
 
 function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozzle?: NozzlePose) {
+  world.fieldMesh.visible = false;
+  world.mesh.visible = true;
+  world.renderer.domElement.dataset.surface = "strand";
   const { positions, normals, colors, indices, mesh } = world;
   start = Math.min(world.nodes, Math.max(0, start - 1));
   // Compact indices omit missing spans; offsets keep later uploads incremental.
@@ -182,6 +188,10 @@ function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozz
   );
   index.needsUpdate = true;
   mesh.geometry.setDrawRange(0, cursor);
+  updateNozzle(world, deposits, nozzle);
+}
+
+function updateNozzle(world: World, deposits: SceneDeposit[], nozzle?: NozzlePose) {
   world.nodes = deposits.length;
   world.renderer.domElement.dataset.nodes = String(deposits.length);
   const last = deposits.at(-1);
@@ -201,6 +211,46 @@ function appendNodes(world: World, deposits: SceneDeposit[], start: number, nozz
     world.renderer.domElement.dataset.nozzleZ = pose.z.toFixed(5);
     world.renderer.domElement.dataset.flow = pose.flow.toFixed(5);
   }
+}
+
+function appendSurface(world: World, surface: HeightfieldSurface, deposits: SceneDeposit[], nozzle?: NozzlePose) {
+  const { nx, nz, cellMm, height } = surface;
+  const geometry = world.fieldMesh.geometry;
+  let positions = geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
+  if (!positions || positions.count !== nx * nz) {
+    positions = new THREE.BufferAttribute(new Float32Array(nx * nz * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute("position", positions);
+    geometry.setIndex(new THREE.BufferAttribute(new Uint32Array((nx - 1) * (nz - 1) * 6), 1).setUsage(THREE.DynamicDrawUsage));
+  }
+  const index = geometry.index!;
+  const scale = MATERIAL_PROFILE.millimetersPerUnit;
+  let count = 0, volume = 0, peak = 0;
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const a = j * nx + i;
+    positions.setXYZ(a, ((i + .5) * cellMm - nx * cellMm / 2) / scale,
+      BASE_TOP + height[a] / scale, ((j + .5) * cellMm - nz * cellMm / 2) / scale);
+    volume += height[a] * cellMm * cellMm;
+    peak = Math.max(peak, height[a]);
+    if (i + 1 < nx && j + 1 < nz) {
+      const b = a + 1, c = a + nx, d = c + 1;
+      // Direct field surface: no tubes, synthetic layer grooves, or filled dry holes.
+      if (Math.max(height[a], height[b], height[c], height[d]) > .005) {
+        for (const vertex of [a, c, b, b, c, d]) index.setX(count++, vertex);
+      }
+    }
+  }
+  // Clear unused triangles: computeVertexNormals traverses the entire index buffer.
+  index.array.fill(0, count);
+  positions.needsUpdate = true; index.needsUpdate = true;
+  geometry.setDrawRange(0, count);
+  geometry.computeVertexNormals();
+  world.fieldMesh.visible = true; world.mesh.visible = false;
+  const data = world.renderer.domElement.dataset;
+  data.surface = "heightfield"; data.triangles = String(count / 3);
+  data.volumeMm3 = String(volume); data.peakMm = String(peak);
+  updateNozzle(world, deposits, nozzle);
+  // The field assumes instantaneous arrival; do not draw an unsimulated airborne strand.
+  world.stream.visible = false;
 }
 
 function resetCamera(
@@ -234,10 +284,16 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
     useImperativeHandle(
       ref,
       () => ({
-        reset() {
+        reset(version = 3) {
           const w = worldRef.current;
           if (!w) return;
           w.mesh.geometry.setDrawRange(0, 0);
+          w.fieldMesh.geometry.setDrawRange(0, 0);
+          w.fieldMesh.visible = version === 4;
+          w.mesh.visible = version !== 4;
+          w.renderer.domElement.dataset.nodes = "0";
+          w.renderer.domElement.dataset.surface = version === 4 ? "heightfield" : "strand";
+          if (container.current) container.current.dataset.engine = String(version);
           w.nodes = 0;
           w.revision++;
           w.ready = true;
@@ -246,7 +302,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
           if (container.current) container.current.dataset.renderState = "ready";
           resetCamera(w);
         },
-        append(deposits, start, nozzle) {
+        append(deposits, start, nozzle, surface) {
           const w = worldRef.current;
           if (!w) return;
           if (!w.ready) {
@@ -255,7 +311,8 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
             start = 0;
             if (container.current) container.current.dataset.renderState = "ready";
           }
-          appendNodes(w, deposits, start, nozzle);
+          if (surface) appendSurface(w, surface, deposits, nozzle);
+          else appendNodes(w, deposits, start, nozzle);
         },
         display(pottery) {
           loadRef.current(pottery);
@@ -462,6 +519,12 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       mesh.receiveShadow = true;
       mesh.frustumCulled = false;
       scene.add(mesh);
+      const fieldMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({
+        color: new THREE.Color(.436, .43, .41), roughness: .7, metalness: 0, side: THREE.DoubleSide,
+      }));
+      fieldMesh.visible = false; fieldMesh.frustumCulled = false;
+      fieldMesh.castShadow = true; fieldMesh.receiveShadow = true;
+      scene.add(fieldMesh);
 
       const ghost = new THREE.Group();
       const ghostMaterial = new THREE.LineDashedMaterial({
@@ -573,6 +636,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         camera,
         controls,
         mesh,
+        fieldMesh,
         ghost,
         head,
         stream,
@@ -631,9 +695,10 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         world.ready = false;
         host.dataset.renderState = "loading";
         host.dataset.engine = String(pottery.simulation?.version ?? 1);
-        loadDeposits(pottery).then((deposits) => {
+        loadMaterial(pottery).then(({ deposits, surface, nozzle }) => {
           if (worldRef.current !== world || revision !== world.revision) return;
-          appendNodes(world, deposits, 0, initial.initialNozzle);
+          if (surface) appendSurface(world, surface, deposits, initial.initialNozzle ?? nozzle);
+          else appendNodes(world, deposits, 0, initial.initialNozzle);
           world.ready = true;
           host.dataset.renderState = "ready";
           resetCamera(world);

@@ -1,24 +1,24 @@
-import { generateDeposits } from "./pottery";
-import type { Pottery, SceneDeposit } from "./pottery";
+import { generateMaterial } from "./pottery";
+import type { Pottery, SceneMaterial } from "./pottery";
 
 let worker: Worker | undefined;
 let nextRequest = 0;
-const pending = new Map<number, { resolve: (deposits: SceneDeposit[]) => void; reject: (error: Error) => void }>();
-const cache = new WeakMap<Pottery, { key: string; promise: Promise<SceneDeposit[]> }>();
+const pending = new Map<number, { resolve: (material: SceneMaterial) => void; reject: (error: Error) => void }>();
+const cache = new WeakMap<Pottery, { key: string; promise: Promise<SceneMaterial> }>();
 
-export function loadDeposits(pottery: Pottery): Promise<SceneDeposit[]> {
+export function loadMaterial(pottery: Pottery): Promise<SceneMaterial> {
   const key = JSON.stringify([pottery.seed, pottery.steps, pottery.events, pottery.simulation]);
   const cached = cache.get(pottery);
   if (cached?.key === key) return cached.promise;
   if (!pottery.simulation || typeof Worker === "undefined")
-    return Promise.resolve(generateDeposits(pottery));
+    return Promise.resolve(generateMaterial(pottery));
   if (!worker) {
     worker = new Worker(new URL("./material.worker.ts", import.meta.url), { type: "module" });
-    worker.onmessage = (event: MessageEvent<{ request: number; deposits?: SceneDeposit[]; error?: string }>) => {
+    worker.onmessage = (event: MessageEvent<{ request: number; material?: SceneMaterial; error?: string }>) => {
       const request = pending.get(event.data.request);
       if (!request) return;
       pending.delete(event.data.request);
-      if (event.data.deposits) request.resolve(event.data.deposits);
+      if (event.data.material) request.resolve(event.data.material);
       else request.reject(new Error(event.data.error ?? "Material reconstruction failed"));
     };
     worker.onerror = () => {
@@ -29,7 +29,7 @@ export function loadDeposits(pottery: Pottery): Promise<SceneDeposit[]> {
     };
   }
   const request = nextRequest++;
-  const promise = new Promise<SceneDeposit[]>((resolve, reject) => {
+  const promise = new Promise<SceneMaterial>((resolve, reject) => {
     pending.set(request, { resolve, reject });
     worker!.postMessage({ request, pottery });
   });

@@ -1,6 +1,7 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
+import { mockDefaultMemories } from "./memory-fixture.mjs";
 
 await mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({
@@ -16,6 +17,7 @@ const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
   deviceScaleFactor: 1,
 });
+await mockDefaultMemories(context);
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -107,10 +109,14 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   assert.equal(await page.title(), "Uncontrolled Studio");
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.equal(await page.getByRole("dialog").count(), 0, "guidance is on demand, not an opening wall of text");
+  await page.getByRole("button", { name: "How it works", exact: true }).last().click();
   assert.match(await page.locator(".guide-steps").innerText(), /with names removed/);
-  assert.match(await page.locator(".guide-method-note").innerText(), /V3 is an uncalibrated material preview/);
-  assert.doesNotMatch(await page.locator("body").innerText(), /\p{Script=Han}/u,
-    "the fresh interface, including guide and built-in work titles, is English");
+  assert.match(await page.locator(".guide-method-note").last().innerText(), /Both physics modes are uncalibrated/);
+  assert.match(await page.locator(".guide-method-note").last().innerText(), /Experimental V4/);
+  for (const selector of ['.topbar', '.nav-rail', '.guide-modal', '.print-actions'])
+    assert.doesNotMatch(await page.locator(selector).innerText(), /\p{Script=Han}/u,
+      'interface labels are English; original memory language is not constrained');
   await dismissGuide(page);
   await page.locator(".viewport canvas").waitFor();
   await page.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
@@ -238,6 +244,7 @@ try {
       hasTouch: width < 600,
     });
     mobile.on("pageerror", (error) => errors.push(error.message));
+    await mockDefaultMemories(mobile.context());
     await mobile.goto(baseUrl, { waitUntil: "networkidle" });
     await dismissGuide(mobile);
     await mobile.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
