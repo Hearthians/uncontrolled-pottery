@@ -44,6 +44,15 @@ test("all three simulation generations preserve process data and matching archiv
   }
 });
 
+test("custom titles retain their original language across all archive versions", () => {
+  const { pottery: plastic } = plasticFixture();
+  for (const original of [LEGACY_PRESETS[0], PRESETS[0], plastic]) {
+    const pottery = { ...original, title: "旧作 · 自定义名称" };
+    const restored = parseArchive(JSON.stringify(createArchive(pottery)));
+    assert.equal(restored.title, pottery.title);
+  }
+});
+
 test("v3 archive replay preserves stopped geometry, supply history, and emotion provenance", () => {
   const { pottery, simulation } = plasticFixture();
   const restored = parseArchive(JSON.stringify(createArchive(pottery)));

@@ -174,7 +174,7 @@ export function isPottery(value: unknown): value is Pottery {
 export const PRESETS: Pottery[] = [
   {
     id: "study-001",
-    title: "秩序之外",
+    title: "Beyond Order",
     seed: 19,
     steps: TOTAL_STEPS,
     duration: DURATION,
@@ -188,7 +188,7 @@ export const PRESETS: Pottery[] = [
   },
   {
     id: "study-002",
-    title: "留白的容器",
+    title: "A Vessel of Absence",
     seed: 63,
     steps: TOTAL_STEPS,
     duration: DURATION,
@@ -202,7 +202,7 @@ export const PRESETS: Pottery[] = [
   },
   {
     id: "study-003",
-    title: "缓慢的偏离",
+    title: "Slow Departure",
     seed: 112,
     steps: TOTAL_STEPS,
     duration: DURATION,

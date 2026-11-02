@@ -25,11 +25,11 @@ export type EmotionPlan = {
 
 export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
   version: 1,
-  title: "亲近及其边界之器",
+  title: "Closeness and Its Boundaries",
   summary:
-    "日常照料构成容器的基础，惊奇与成就使它扩张；压力、羞辱、愤怒、危险、悲伤与孤立随后收紧轮廓。选择和安静的自我关注重新打开空间，但不修复每一次失去。",
+    "Everyday care forms the base; wonder and achievement open it. Pressure, shame, anger, danger, grief and isolation tighten the form. Choice and quiet self-care make space again, without undoing every loss.",
   methodNote:
-    "这是一条由 1910 条集体记忆编排出的戏剧性轨迹，不代表共同年表、单个人生或心理诊断。",
+    "A dramatic arc composed from 1,910 collective memories—not a shared chronology, a single life story, or a psychological diagnosis.",
   memoryCount: 1910,
   model: "claude-opus-5-5",
   promptVersion: "collective-memory-dramaturgy-1",
@@ -37,7 +37,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
   trajectory: [
     {
       position: 0,
-      label: "日常照料",
+      label: "Everyday care",
       valence: 0.84,
       arousal: 0.3,
       dominance: 0.62,
@@ -46,7 +46,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.09,
-      label: "惊奇与共同玩乐",
+      label: "Wonder and play",
       valence: 0.87,
       arousal: 0.75,
       dominance: 0.61,
@@ -55,7 +55,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.18,
-      label: "能力变得可见",
+      label: "Ability recognized",
       valence: 0.85,
       arousal: 0.71,
       dominance: 0.85,
@@ -64,7 +64,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.27,
-      label: "成功的压力",
+      label: "Pressure to succeed",
       valence: -0.8,
       arousal: 0.75,
       dominance: 0.2,
@@ -73,7 +73,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.36,
-      label: "暴露与受损的自我价值",
+      label: "Exposure and self-doubt",
       valence: -0.86,
       arousal: 0.76,
       dominance: 0.16,
@@ -82,7 +82,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.45,
-      label: "受限选择中的愤怒",
+      label: "Anger without choice",
       valence: -0.79,
       arousal: 0.87,
       dominance: 0.32,
@@ -91,7 +91,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.54,
-      label: "失控边缘",
+      label: "Losing control",
       valence: -0.91,
       arousal: 0.95,
       dominance: 0.11,
@@ -100,7 +100,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.63,
-      label: "不可逆的缺席",
+      label: "Irreversible loss",
       valence: -0.95,
       arousal: 0.65,
       dominance: 0.12,
@@ -109,7 +109,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.72,
-      label: "没有结束感的距离",
+      label: "Distance without closure",
       valence: -0.79,
       arousal: 0.39,
       dominance: 0.19,
@@ -118,7 +118,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.81,
-      label: "重新获得选择",
+      label: "Reclaiming choice",
       valence: 0.38,
       arousal: 0.62,
       dominance: 0.74,
@@ -127,7 +127,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 0.9,
-      label: "成就之外的自足",
+      label: "Enough beyond achievement",
       valence: 0.74,
       arousal: 0.18,
       dominance: 0.67,
@@ -136,7 +136,7 @@ export const COLLECTIVE_EMOTION_PLAN: EmotionPlan = {
     },
     {
       position: 1,
-      label: "爱、离开与可能性",
+      label: "Love, leaving, possibility",
       valence: 0.34,
       arousal: 0.52,
       dominance: 0.48,

@@ -103,7 +103,7 @@ function ProcessChart({
 }) {
   const step = currentStep ?? pottery.steps;
   return (
-    <div className="process-chart" aria-label="打印过程参数记录">
+    <div className="process-chart" aria-label="Print process parameter history">
       <div className="chart-lines">
         <i />
         <i />
@@ -167,7 +167,7 @@ function GalleryItem({
     <button
       className="gallery-item"
       onClick={onOpen}
-      aria-label={`查看作品：${pottery.title}`}
+      aria-label={`View work: ${pottery.title}`}
     >
       <div className="gallery-image" ref={imageRef}>
         {thumbnail ? (
@@ -199,13 +199,13 @@ function GalleryItem({
         <div>
           <h3>{pottery.title}</h3>
           <span>
-            {pottery.preset ? "工坊试作" : "我的收藏"} <i />{" "}
-            {Math.ceil(pottery.steps / SEGMENTS)} 层
+            {pottery.preset ? "Studio study" : "My collection"} <i />{" "}
+            {Math.ceil(pottery.steps / SEGMENTS)} layers
           </span>
         </div>
         <div className="gallery-values">
-          <span>波动 {settings.fluctuation}%</span>
-          <span>中断 {settings.interruption}%</span>
+          <span>Fluctuation {settings.fluctuation}%</span>
+          <span>Interruption {settings.interruption}%</span>
         </div>
       </div>
     </button>
@@ -218,7 +218,7 @@ export default function App() {
   const [status, setStatus] = useState<Status>("ready");
   const [currentEmotion, setCurrentEmotion] = useState(initialEmotion);
   const [progress, setProgress] = useState(0);
-  const [planned, setPlanned] = useState(true);
+  const [planned, setPlanned] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [view, setView] = useState<"perspective" | "front" | "top">(
     "perspective",
@@ -340,7 +340,7 @@ export default function App() {
       }
       if (engine.complete) {
         setStatus("complete");
-        notify("打印完成");
+        notify("Print complete");
       } else frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -398,9 +398,9 @@ export default function App() {
       setCollection(next);
       setSavedId(pottery.id);
       setNameOpen(false);
-      notify("已加入作品画廊");
+      notify("Added to the gallery");
     } catch {
-      notify("收藏空间已满，请先导出作品记录。");
+      notify("Collection storage is full. Export your work first.");
     }
   }
 
@@ -408,9 +408,9 @@ export default function App() {
     const data = createArchive(pottery);
     download(
       new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      `${pottery.title}-过程.json`,
+      `${pottery.title}-process.json`,
     );
-    notify("作品与参数记录已导出");
+    notify("Work and process data exported");
   }
 
   async function importWork(file: File) {
@@ -420,7 +420,7 @@ export default function App() {
       const existing = collection.find((work) => work.id === pottery.id);
       if (existing) {
         setSelected(existing);
-        notify("作品已在收藏中");
+        notify("This work is already in your collection");
         return;
       }
       const next = [pottery, ...collection];
@@ -428,9 +428,9 @@ export default function App() {
       setCollection(next);
       setGalleryFilter("mine");
       setSelected(pottery);
-      notify("作品已导入");
+      notify("Work imported");
     } catch {
-      notify("无法导入，请检查记录版本与收藏空间");
+      notify("Import failed. Check the archive version and available storage.");
     }
   }
 
@@ -446,12 +446,12 @@ export default function App() {
   function exportImage() {
     const data = detailRef.current?.capture();
     if (!data) {
-      notify("作品正在重建");
+      notify("Work is still being reconstructed");
       return;
     }
     const a = document.createElement("a");
     a.href = data;
-    a.download = `${selected?.title ?? "陶器"}.webp`;
+    a.download = `${selected?.title ?? "pottery"}.webp`;
     a.click();
   }
 
@@ -466,7 +466,7 @@ export default function App() {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await studioRef.current?.requestFullscreen();
     } catch {
-      notify("当前浏览器未开启全屏模式");
+      notify("Fullscreen is unavailable in this browser");
     }
   }
 
@@ -475,7 +475,7 @@ export default function App() {
       <aside className="nav-rail">
         <button
           className="brand-symbol"
-          aria-label="返回工坊"
+          aria-label="Back to studio"
           onClick={() => changePage("studio")}
         >
           <Layers3 size={27} strokeWidth={1.6} />
@@ -484,33 +484,33 @@ export default function App() {
           <button
             className={page === "studio" ? "rail-item selected" : "rail-item"}
             onClick={() => changePage("studio")}
-            aria-label="打印工坊"
-            title="打印工坊"
+            aria-label="Print studio"
+            title="Print studio"
           >
             <Box size={22} strokeWidth={1.5} />
-            <span>工坊</span>
+            <span>Studio</span>
           </button>
           <button
             className={page === "gallery" ? "rail-item selected" : "rail-item"}
             onClick={() => changePage("gallery")}
-            aria-label="作品画廊"
-            title="作品画廊"
+            aria-label="Gallery"
+            title="Gallery"
           >
             <GalleryHorizontalEnd size={22} strokeWidth={1.5} />
-            <span>画廊</span>
+            <span>Gallery</span>
           </button>
           <button
             className="rail-item"
             onClick={() => setProcessOpen(true)}
-            aria-label="过程记录"
-            title="过程记录"
+            aria-label="Process history"
+            title="Process history"
           >
             <AudioLines size={22} strokeWidth={1.5} />
-            <span>记录</span>
+            <span>History</span>
           </button>
         </div>
         <div className="rail-bottom">
-          <IconButton label="操作引导" onClick={() => {
+          <IconButton label="How it works" onClick={() => {
             if (status === "printing") setStatus("paused");
             setGuideOpen(true);
           }}>
@@ -523,11 +523,11 @@ export default function App() {
         <header className="topbar">
           <button className="wordmark" onClick={() => changePage("studio")}>
             <span>
-              失控陶坊<span className="brand-dot">.</span>
+              Uncontrolled Studio<span className="brand-dot">.</span>
             </span>
           </button>
           <div className="topbar-tools">
-            <IconButton label="操作引导" onClick={() => {
+            <IconButton label="How it works" onClick={() => {
               if (status === "printing") setStatus("paused");
               setGuideOpen(true);
             }}>
@@ -540,11 +540,11 @@ export default function App() {
           <main className="studio-page">
             <div className="page-heading">
               <div className="page-title">
-                <h1>打印工坊</h1>
+                <h1>Print studio</h1>
               </div>
               <div className="heading-actions">
                 <span className="session-label">
-                  {COLLECTIVE_EMOTION_PLAN.memoryCount} 条集体记忆
+                  {COLLECTIVE_EMOTION_PLAN.memoryCount} collective memories
                 </span>
               </div>
             </div>
@@ -567,33 +567,33 @@ export default function App() {
                     <span className={`status-dot ${status}`} />
                     <span>
                       {status === "ready"
-                        ? "预览"
+                        ? "Preview"
                         : status === "printing"
-                          ? finishing ? "正在收尾" : "正在沉积"
+                          ? finishing ? "Finishing" : "Depositing"
                           : status === "paused"
-                            ? "打印已暂停"
-                            : "打印完成"}
+                            ? "Print paused"
+                            : "Print complete"}
                     </span>
                   </div>
-                  <IconButton label="全屏" onClick={toggleFullscreen}>
+                  <IconButton label="Fullscreen" onClick={toggleFullscreen}>
                     <Expand size={18} />
                   </IconButton>
                 </div>
                 {webglError && (
                   <div className="webgl-error">
                     <Box size={30} />
-                    <p>三维画面需要启用 WebGL</p>
-                    <button onClick={() => location.reload()}>重新加载</button>
+                    <p>Enable WebGL to view the 3D scene</p>
+                    <button onClick={() => location.reload()}>Reload</button>
                   </div>
                 )}
                 {status === "ready" && !webglError && (
                   <button
                     className="scene-start-button"
-                    aria-label="从工作台开始打印"
+                    aria-label="Start printing from the workbench"
                     onClick={startPrint}
                   >
                     <Play size={16} fill="currentColor" />
-                    <span>开始创作</span>
+                    <span>Create</span>
                     <ArrowRight size={16} />
                   </button>
                 )}
@@ -604,10 +604,10 @@ export default function App() {
                       aria-expanded={viewMenu}
                     >
                       {view === "perspective"
-                        ? "透视视图"
+                        ? "Perspective"
                         : view === "front"
-                          ? "正面视图"
-                          : "俯视视图"}
+                          ? "Front view"
+                          : "Top view"}
                       <ChevronDown size={13} />
                     </button>
                     {viewMenu && (
@@ -622,7 +622,7 @@ export default function App() {
                                 setViewMenu(false);
                               }}
                             >
-                              {["透视视图", "正面视图", "俯视视图"][i]}
+                              {["Perspective", "Front view", "Top view"][i]}
                               {view === option && <Check size={13} />}
                             </button>
                           ),
@@ -632,14 +632,14 @@ export default function App() {
                   </div>
                   <div className="canvas-tools">
                     <IconButton
-                      label={planned ? "隐藏原始路径" : "显示原始路径"}
+                      label={planned ? "Hide reference cylinder" : "Show reference cylinder"}
                       active={planned}
                       onClick={() => setPlanned(!planned)}
                     >
                       {planned ? <Eye size={17} /> : <EyeOff size={17} />}
                     </IconButton>
                     <IconButton
-                      label="自动旋转"
+                      label="Auto-rotate"
                       active={autoRotate}
                       onClick={() => setAutoRotate(!autoRotate)}
                     >
@@ -647,7 +647,7 @@ export default function App() {
                     </IconButton>
                     <span />
                     <IconButton
-                      label="重置视角"
+                      label="Reset view"
                       onClick={() => {
                         sceneRef.current?.resetView();
                         setView("perspective");
@@ -663,26 +663,26 @@ export default function App() {
                 <div className="panel-heading">
                   <div>
                     <Sparkles size={17} />
-                    <h2>记忆轨迹</h2>
+                    <h2>Memory arc</h2>
                   </div>
                   <span>AGENT DIRECTED</span>
                 </div>
                 <div className="emotion-plan-copy">
-                  <span>{COLLECTIVE_EMOTION_PLAN.memoryCount} 条集体记忆</span>
+                  <span>{COLLECTIVE_EMOTION_PLAN.memoryCount} collective memories</span>
                   <h3>{COLLECTIVE_EMOTION_PLAN.title}</h3>
                   <p>{COLLECTIVE_EMOTION_PLAN.summary}</p>
                 </div>
                 <div className="emotion-stage" aria-live="polite">
-                  <span>{status === "ready" ? "起始阶段" : "当前情绪"}</span>
+                  <span>{status === "ready" ? "Opening stage" : "Current emotion"}</span>
                   <h3>{currentEmotion.label}</h3>
                   <div>
                     <i style={{ "--emotion-value": `${(currentEmotion.valence + 1) * 50}%` } as React.CSSProperties} />
                     <i style={{ "--emotion-value": `${currentEmotion.arousal * 100}%` } as React.CSSProperties} />
                     <i style={{ "--emotion-value": `${currentEmotion.dominance * 100}%` } as React.CSSProperties} />
                   </div>
-                  <small>效价 · 唤醒 · 控制</small>
+                  <small>Valence · Arousal · Control</small>
                 </div>
-                <div className="emotion-timeline" aria-label="十二阶段情绪轨迹">
+                <div className="emotion-timeline" aria-label="Twelve-stage emotion arc">
                   {COLLECTIVE_EMOTION_PLAN.trajectory.map((point) => (
                     <i
                       key={point.position}
@@ -696,7 +696,7 @@ export default function App() {
                   {status === "ready" && (
                     <button className="primary-button" onClick={startPrint}>
                       <Play size={17} fill="currentColor" />
-                      <span>开始打印</span>
+                      <span>Start print</span>
                       <span className="button-time">55 s</span>
                     </button>
                   )}
@@ -706,7 +706,7 @@ export default function App() {
                       onClick={() => setStatus("paused")}
                     >
                       <Pause size={17} fill="currentColor" />
-                      <span>暂停打印</span>
+                      <span>Pause print</span>
                       <span className="button-time">
                         {Math.max(0, Math.ceil(DURATION * (1 - progress)))} s
                       </span>
@@ -718,7 +718,7 @@ export default function App() {
                       onClick={() => setStatus("printing")}
                     >
                       <Play size={17} fill="currentColor" />
-                      <span>继续打印</span>
+                      <span>Resume print</span>
                       <span className="button-time">
                         {Math.max(0, Math.ceil(DURATION * (1 - progress)))} s
                       </span>
@@ -734,7 +734,7 @@ export default function App() {
                       }}
                     >
                       {savedId ? <Check size={17} /> : <Plus size={17} />}
-                      <span>{savedId ? "已加入画廊" : "收藏这件作品"}</span>
+                      <span>{savedId ? "Saved to gallery" : "Save this work"}</span>
                       <GalleryHorizontalEnd size={17} />
                     </button>
                   )}
@@ -751,13 +751,13 @@ export default function App() {
                         ) : (
                           <Play size={13} />
                         )}
-                        {isActive ? "结束本次" : "再次打印"}
+                        {isActive ? "Finish print" : "Print again"}
                       </button>
                     )}
                     {status === "complete" ? (
                       <button onClick={() => exportWork(currentPottery)}>
                         <ArrowDownToLine size={13} />
-                        导出记录
+                        Export record
                       </button>
                     ) : null}
                   </div>
@@ -774,19 +774,19 @@ export default function App() {
                   <div>
                     <span>
                       {status === "ready"
-                        ? "就绪"
+                        ? "Ready"
                         : status === "complete"
-                          ? "已完成"
+                          ? "Complete"
                           : status === "paused"
-                            ? "已暂停"
-                            : "打印中"}
+                            ? "Paused"
+                            : "Printing"}
                     </span>
                   </div>
                 </div>
                 <div className="monitor-progress">
                   <div>
                     <span>
-                      打印进度{" "}
+                      Print progress{" "}
                       <b>
                         {Math.floor(progress * 100)}
                         <small>%</small>
@@ -801,7 +801,7 @@ export default function App() {
                   <div
                     className="progress-track"
                     role="progressbar"
-                    aria-label="打印进度"
+                    aria-label="Print progress"
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.floor(progress * 100)}
@@ -810,7 +810,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="layer-count">
-                  <span>当前层数</span>
+                  <span>Current layer</span>
                   <div>
                     {String(currentLayer).padStart(2, "0")}
                     <small>/ {LAYERS}</small>
@@ -822,7 +822,7 @@ export default function App() {
             <section className="gallery-band">
               <div className="gallery-heading">
                 <div>
-                  <h2>作品画廊</h2>
+                  <h2>Gallery</h2>
                   <span className="collection-count">
                     {allWorks.length.toString().padStart(2, "0")}
                   </span>
@@ -831,7 +831,7 @@ export default function App() {
                   className="text-button"
                   onClick={() => changePage("gallery")}
                 >
-                  全部作品
+                  All works
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -852,7 +852,7 @@ export default function App() {
             <div className="collection-page-heading">
               <div>
                 <h1>
-                  作品画廊
+                  Gallery
                   <span>{allWorks.length.toString().padStart(2, "0")}</span>
                 </h1>
               </div>
@@ -861,7 +861,7 @@ export default function App() {
                 onClick={() => changePage("studio")}
               >
                 <Plus size={16} />
-                回到工坊
+                Back to studio
               </button>
             </div>
             <div className="collection-toolbar">
@@ -870,23 +870,23 @@ export default function App() {
                   className={galleryFilter === "all" ? "selected" : ""}
                   onClick={() => setGalleryFilter("all")}
                 >
-                  全部作品 <span>{allWorks.length}</span>
+                  All works <span>{allWorks.length}</span>
                 </button>
                 <button
                   className={galleryFilter === "mine" ? "selected" : ""}
                   onClick={() => setGalleryFilter("mine")}
                 >
-                  我的收藏 <span>{collection.length}</span>
+                  My collection <span>{collection.length}</span>
                 </button>
               </div>
-              <IconButton label="导入作品记录" onClick={() => importRef.current?.click()}>
+              <IconButton label="Import work archive" onClick={() => importRef.current?.click()}>
                 <Upload size={18} />
               </IconButton>
               <input
                 ref={importRef}
                 type="file"
                 accept=".json,application/json"
-                aria-label="作品记录文件"
+                aria-label="Work archive file"
                 hidden
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -898,12 +898,12 @@ export default function App() {
             {galleryFilter === "mine" && !collection.length ? (
               <div className="empty-collection">
                 <GalleryHorizontalEnd size={38} strokeWidth={1} />
-                <h2>暂无收藏</h2>
+                <h2>No saved works yet</h2>
                 <button
                   className="text-button"
                   onClick={() => changePage("studio")}
                 >
-                  进入工坊
+                  Enter studio
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -950,7 +950,7 @@ export default function App() {
                 autoRotate
               />
               <IconButton
-                label="关闭作品"
+                label="Close work"
                 className="modal-close"
                 onClick={() => setSelected(null)}
               >
@@ -960,20 +960,20 @@ export default function App() {
             <div className="detail-info">
               <h2>{selected.title}</h2>
               <div className="detail-metadata">
-                <span>{selected.preset ? "工坊试作" : "我的收藏"}</span>
-                <span>{Math.ceil(selected.steps / SEGMENTS)} 层</span>
+                <span>{selected.preset ? "Studio study" : "My collection"}</span>
+                <span>{Math.ceil(selected.steps / SEGMENTS)} layers</span>
                 <span>{selected.duration.toFixed(1)} s</span>
               </div>
               <div className="detail-stats">
                 <div>
-                  <span>平均供料波动</span>
+                  <span>Mean supply fluctuation</span>
                   <b>
                     {meanSettings(selected).fluctuation}
                     <small>%</small>
                   </b>
                 </div>
                 <div>
-                  <span>平均供料中断</span>
+                  <span>Mean supply interruption</span>
                   <b>
                     {meanSettings(selected).interruption}
                     <small>%</small>
@@ -981,40 +981,40 @@ export default function App() {
                 </div>
               </div>
               <div className="detail-chart-heading">
-                <h3>沉积过程</h3>
+                <h3>Deposition history</h3>
                 <span>
                   <i />
-                  波动
+                  Fluctuation
                   <b />
-                  中断
+                  Interruption
                 </span>
               </div>
               <ProcessChart pottery={selected} />
               <div className="chart-axis">
-                <span>底部 / 00:00</span>
-                <span>顶部 / {timeLabel(selected.duration)}</span>
+                <span>Base / 00:00</span>
+                <span>Top / {timeLabel(selected.duration)}</span>
               </div>
               <div className="process-meta">
-                <span>基础形态</span>
-                <b>圆筒</b>
-                <span>材料</span>
-                <b>灰白湿泥</b>
-                <span>过程节点</span>
-                <b>{selected.events.length} 次</b>
+                <span>Base form</span>
+                <b>Cylinder</b>
+                <span>Material</span>
+                <b>Gray-white wet clay</b>
+                <span>Process events</span>
+                <b>{selected.events.length}</b>
               </div>
               <button
                 className="primary-button"
                 onClick={() => exportWork(selected)}
               >
                 <ArrowDownToLine size={16} />
-                导出作品记录
+                Export work archive
                 <ArrowRight size={16} />
               </button>
               <button
                 className="text-button export-image"
                 onClick={exportImage}
               >
-                保存作品图像
+                Save image
                 <ArrowDownToLine size={14} />
               </button>
             </div>
@@ -1032,14 +1032,14 @@ export default function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <IconButton
-              label="关闭收藏"
+              label="Close save dialog"
               className="modal-close"
               onClick={() => setNameOpen(false)}
             >
               <X size={19} />
             </IconButton>
-            <h2 id="save-title">收藏作品</h2>
-            <label htmlFor="work-title">作品名称</label>
+            <h2 id="save-title">Save work</h2>
+            <label htmlFor="work-title">Work title</label>
             <input
               id="work-title"
               maxLength={28}
@@ -1050,13 +1050,13 @@ export default function App() {
               }}
             />
             <div className="save-meta">
-              <span>{Math.ceil(currentPottery.steps / SEGMENTS)} 层</span>
+              <span>{Math.ceil(currentPottery.steps / SEGMENTS)} layers</span>
               <span>{currentPottery.duration.toFixed(1)} s</span>
-              <span>过程已记录</span>
+              <span>Process recorded</span>
             </div>
             <button className="primary-button" onClick={saveWork}>
               <Plus size={16} />
-              加入作品画廊
+              Add to gallery
               <ArrowRight size={16} />
             </button>
           </section>
@@ -1073,20 +1073,20 @@ export default function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <IconButton
-              label="关闭过程记录"
+              label="Close process history"
               className="modal-close"
               onClick={() => setProcessOpen(false)}
             >
               <X size={19} />
             </IconButton>
-            <h2 id="process-title">过程记录</h2>
+            <h2 id="process-title">Process history</h2>
             <div className="detail-chart-heading">
-              <h3>{status === "ready" ? "试作 / 秩序之外" : "当前作品"}</h3>
+              <h3>{status === "ready" ? `Study / ${currentPottery.title}` : "Current work"}</h3>
               <span>
                 <i />
-                波动
+                Fluctuation
                 <b />
-                中断
+                Interruption
               </span>
             </div>
             <ProcessChart
@@ -1096,8 +1096,8 @@ export default function App() {
               }
             />
             <div className="chart-axis">
-              <span>底部</span>
-              <span>顶部</span>
+              <span>Base</span>
+              <span>Top</span>
             </div>
             <div className="event-list">
               {currentPottery.events.slice(-8).map((event, i) => (
@@ -1110,12 +1110,12 @@ export default function App() {
                     )}
                   </span>
                   <span>
-                    波动 <b>{event.fluctuation}%</b>
+                    Fluctuation <b>{event.fluctuation}%</b>
                   </span>
                   <span>
-                    中断 <b>{event.interruption}%</b>
+                    Interruption <b>{event.interruption}%</b>
                   </span>
-                  {currentPottery.simulation?.version !== 3 && event.sag && <span>下垂</span>}
+                  {currentPottery.simulation?.version !== 3 && event.sag && <span>Sag</span>}
                 </div>
               ))}
             </div>
@@ -1124,7 +1124,7 @@ export default function App() {
               onClick={() => exportWork(currentPottery)}
             >
               <ArrowDownToLine size={16} />
-              导出过程记录
+              Export process history
               <ArrowRight size={16} />
             </button>
           </section>
@@ -1141,31 +1141,31 @@ export default function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <IconButton
-              label="关闭引导"
+              label="Close guide"
               className="modal-close"
               onClick={closeGuide}
             >
               <X size={19} />
             </IconButton>
-            <h2 id="guide-title">让集体记忆留下形状</h2>
+            <h2 id="guide-title">Give collective memory a form</h2>
             <ol className="guide-steps">
               <li>
                 <div className="guide-symbol"><Sparkles size={26} /></div>
-                <div><h3>Agent 编排记忆</h3><p>1910 条匿名记忆被整理为十二段情绪轨迹</p></div>
+                <div><h3>Agent-composed memories</h3><p>1,910 memories, with names removed, form a twelve-stage emotion arc.</p></div>
               </li>
               <li>
-                <div className="guide-symbol guide-mapping"><span>底</span><span>顶</span></div>
-                <div><h3>轨迹从底部走向顶部</h3><p>情绪只改变供料波动与中断；材料性质始终相同</p></div>
+                <div className="guide-symbol guide-mapping"><span>Base</span><span>Top</span></div>
+                <div><h3>From base to rim</h3><p>Emotion changes only supply fluctuation and interruption; material properties stay fixed.</p></div>
               </li>
               <li>
                 <div className="guide-symbol"><Pause size={26} /><Play size={26} /></div>
-                <div><h3>系统自动打印</h3><p>创作参数不需手动控制；仍可暂停、继续或结束</p></div>
+                <div><h3>Automatic printing</h3><p>No manual parameter controls. You can still pause, resume, or finish early.</p></div>
               </li>
             </ol>
-            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote}</p>
+            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote} V3 is an uncalibrated material preview.</p>
             <div className="guide-actions">
               <button className="primary-button" onClick={closeGuide}>
-                <Check size={17} />进入工坊
+                <Check size={17} />Enter studio
               </button>
             </div>
           </section>

@@ -510,7 +510,9 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         line.computeLineDistances();
         ghost.add(line);
       }
-      ghost.visible = initial.planned ?? true;
+      ghost.visible = initial.planned ?? false;
+      host.dataset.referenceVisible = String(ghost.visible);
+      host.dataset.referenceCenter = "0,0,0";
       scene.add(ghost);
 
       const head = new THREE.Group();
@@ -580,7 +582,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
         indices,
         indexEnds: new Uint32Array(MAX_NODES + 1),
         nodes: 0,
-        planned: initial.planned ?? true,
+        planned: initial.planned ?? false,
         printing: initial.printing ?? false,
         miniature: !!initial.miniature,
         revision: 0,
@@ -608,12 +610,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
           initial.miniature ? 400 : height,
           !initial.miniature,
         );
-        const beside = width / height >= 1.4;
-        ghost.position.set(
-          beside ? 1.75 : 0,
-          beside ? -0.14 : 0,
-          beside ? -1.3 : 0,
-        );
+        ghost.position.set(0, 0, 0);
         if (initial.miniature) {
           renderer.render(scene, camera);
           if (world.ready && !snapshotTaken && initial.onSnapshot) {
@@ -675,7 +672,10 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
     }, []);
 
     useEffect(() => {
-      if (worldRef.current) worldRef.current.ghost.visible = !!props.planned;
+      if (worldRef.current) {
+        worldRef.current.ghost.visible = !!props.planned;
+        if (container.current) container.current.dataset.referenceVisible = String(!!props.planned);
+      }
     }, [props.planned]);
     useEffect(() => {
       if (worldRef.current)
@@ -693,7 +693,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       <div
         ref={container}
         className={props.miniature ? "clay-scene miniature" : "clay-scene"}
-        aria-label="可旋转的三维陶器"
+        aria-label="Rotatable 3D pottery"
       />
     );
   },

@@ -1314,8 +1314,13 @@ input[type="range"] {
 .gallery-item-info {
   padding: 14px 0 0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
+}
+.gallery-item-info > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .gallery-item-info h3 {
   font-size: 12px;
@@ -1327,6 +1332,7 @@ input[type="range"] {
   font-size: 8px;
   color: #9ca88d;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
 }
@@ -1338,7 +1344,8 @@ input[type="range"] {
 }
 .gallery-values {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font: 8px var(--mono);
   color: #95a486;
   align-items: flex-start;
@@ -1558,6 +1565,7 @@ input[type="range"] {
 }
 .detail-chart-heading {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
@@ -1704,7 +1712,8 @@ input[type="range"] {
   padding: 11px 0;
   border-bottom: 1px solid #e7ecdf;
   display: flex;
-  gap: 17px;
+  flex-wrap: wrap;
+  gap: 6px 17px;
   font-size: 9px;
   color: #9dac8e;
 }
@@ -1773,8 +1782,8 @@ input[type="range"] {
   color: var(--accent);
 }
 .guide-mapping {
-  font-size: 17px;
-  padding: 0 5px;
+  font-size: 10px;
+  gap: 6px;
 }
 .guide-mapping span:first-child {
   color: var(--accent);
@@ -2486,7 +2495,7 @@ input[type="range"] {
     left: 50%;
     bottom: 80px;
     font-size: 10px;
-    white-space: nowrap;
+    white-space: normal;
   }
   .modal-backdrop {
     padding: 15px;

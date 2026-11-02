@@ -22,8 +22,24 @@ page.on("pageerror", (error) => errors.push(error.message));
 const log = (message) => console.log(`[verify] ${message}`);
 const baseUrl = process.env.POTTERY_URL || "http://127.0.0.1:5173";
 async function dismissGuide(page) {
-  const close = page.getByRole("button", { name: "关闭引导", exact: true });
+  const close = page.getByRole("button", { name: "Close guide", exact: true });
   if (await close.count()) await close.click();
+}
+
+async function assertReferenceCylinder(page) {
+  const scene = page.locator(".viewport .clay-scene");
+  const show = page.getByRole("button", { name: "Show reference cylinder", exact: true });
+  assert.equal(await show.getAttribute("aria-pressed"), "false");
+  assert.equal(await scene.getAttribute("data-reference-visible"), "false");
+  assert.equal(await scene.getAttribute("data-reference-center"), "0,0,0");
+  await show.click();
+  const hide = page.getByRole("button", { name: "Hide reference cylinder", exact: true });
+  assert.equal(await hide.getAttribute("aria-pressed"), "true");
+  await page.locator('.viewport .clay-scene[data-reference-visible="true"]').waitFor();
+  assert.equal(await scene.getAttribute("data-reference-center"), "0,0,0");
+  await hide.click();
+  await page.locator('.viewport .clay-scene[data-reference-visible="false"]').waitFor();
+  assert.equal(await show.getAttribute("aria-pressed"), "false");
 }
 
 async function canvasStats(page, selector = ".viewport canvas") {
@@ -89,10 +105,17 @@ async function assertLayout(page, label) {
 
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  assert.equal(await page.title(), "Uncontrolled Studio");
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.match(await page.locator(".guide-steps").innerText(), /with names removed/);
+  assert.match(await page.locator(".guide-method-note").innerText(), /V3 is an uncalibrated material preview/);
+  assert.doesNotMatch(await page.locator("body").innerText(), /\p{Script=Han}/u,
+    "the fresh interface, including guide and built-in work titles, is English");
   await dismissGuide(page);
   await page.locator(".viewport canvas").waitFor();
   await page.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
   assert.equal(await page.locator(".webgl-error").count(), 0);
+  await assertReferenceCylinder(page);
   await assertLayout(page, "desktop");
   const initial = await canvasStats(page);
   assert.ok(
@@ -121,7 +144,7 @@ try {
       (await canvasStats(page)).sum,
       "dragging the pottery changes the view",
     );
-    await page.getByRole("button", { name: "自动旋转", exact: true }).click();
+    await page.getByRole("button", { name: "Auto-rotate", exact: true }).click();
     await page.waitForTimeout(700);
     const rotated = await canvasStats(page);
     assert.notEqual(
@@ -129,13 +152,13 @@ try {
       rotated.sum,
       "rotation should change canvas pixels",
     );
-    await page.getByRole("button", { name: "自动旋转", exact: true }).click();
+    await page.getByRole("button", { name: "Auto-rotate", exact: true }).click();
     assert.equal(await page.getByRole("slider").count(), 0, "manual sliders are removed");
-    await page.getByRole("button", { name: "从工作台开始打印" }).click();
-    await page.getByRole("button", { name: "暂停打印" }).waitFor();
+    await page.getByRole("button", { name: "Start printing from the workbench" }).click();
+    await page.getByRole("button", { name: "Pause print" }).waitFor();
     await page.waitForTimeout(11000);
     await page.screenshot({ path: "artifacts/printing.png", fullPage: true });
-    await page.getByRole("button", { name: "暂停打印" }).click();
+    await page.getByRole("button", { name: "Pause print" }).click();
     const paused = await page.locator(".time-code").textContent();
     await page.waitForTimeout(800);
     assert.equal(
@@ -143,23 +166,24 @@ try {
       paused,
       "pause must stop deposition",
     );
-    await page.getByRole("button", { name: "继续打印" }).click();
+    await page.getByRole("button", { name: "Resume print" }).click();
     log(
       "Automatic emotion trajectory and pause/resume verified; waiting for 55-second completion.",
     );
     await page
-      .getByRole("button", { name: "收藏这件作品" })
+      .getByRole("button", { name: "Save this work" })
       .waitFor({ timeout: 85000 });
     await page.screenshot({ path: "artifacts/completed.png", fullPage: true });
-    await page.getByRole("button", { name: "收藏这件作品" }).click();
-    await page.getByLabel("作品名称").fill("下粗上稳 · 实验 001");
+    await page.getByRole("button", { name: "Save this work" }).click();
+    await page.getByLabel("Work title").fill("下粗上稳 · 实验 001");
     await page
-      .getByRole("button", { name: "加入作品画廊", exact: true })
+      .getByRole("button", { name: "Add to gallery", exact: true })
       .click();
     const stored = await page.evaluate(() =>
       JSON.parse(localStorage.getItem("uncontrolled-pottery-v1")),
     );
     assert.equal(stored.length, 1);
+    assert.equal(stored[0].title, "下粗上稳 · 实验 001", "custom titles retain their original language");
     assert.equal(stored[0].steps, 10240);
     assert.equal(stored[0].events.length, 64);
     assert.equal(stored[0].emotionPlan.memoryCount, 1910);
@@ -167,8 +191,9 @@ try {
     assert.ok(stored[0].events.every((event) => event.sag === true), "emotion changes supply, not material behavior");
     assert.ok(stored[0].events.some((event) => event.interruption > 40));
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: "导出记录", exact: true }).click();
+    await page.getByRole("button", { name: "Export record", exact: true }).click();
     const download = await downloadPromise;
+    assert.equal(download.suggestedFilename(), "下粗上稳 · 实验 001-process.json");
     const exported = JSON.parse(await readFile(await download.path(), "utf8"));
     assert.equal(exported.pottery.id, stored[0].id);
     assert.equal(exported.version, 3);
@@ -182,9 +207,9 @@ try {
     );
 
     await page.reload({ waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "作品画廊", exact: true }).click();
+    await page.getByRole("button", { name: "Gallery", exact: true }).click();
     await page
-      .getByRole("button", { name: "查看作品：下粗上稳 · 实验 001" })
+      .getByRole("button", { name: "View work: 下粗上稳 · 实验 001" })
       .click();
     await page.locator(".detail-scene canvas").waitFor();
     await page.locator('.detail-scene .clay-scene[data-render-state="ready"]').waitFor();
@@ -196,10 +221,10 @@ try {
       fullPage: true,
     });
     const imageDownload = page.waitForEvent("download");
-    await page.getByRole("button", { name: "保存作品图像" }).click();
+    await page.getByRole("button", { name: "Save image" }).click();
     assert.ok((await imageDownload).suggestedFilename().endsWith(".webp"));
-    await page.getByRole("button", { name: "关闭作品", exact: true }).click();
-    await page.getByRole("button", { name: "我的收藏 1", exact: true }).click();
+    await page.getByRole("button", { name: "Close work", exact: true }).click();
+    await page.getByRole("button", { name: "My collection 1", exact: true }).click();
     assert.equal(await page.locator(".gallery-item").count(), 1);
     log("Collection survived reload; detail scene and image export verified.");
   }
@@ -216,6 +241,7 @@ try {
     await mobile.goto(baseUrl, { waitUntil: "networkidle" });
     await dismissGuide(mobile);
     await mobile.locator('.viewport .clay-scene[data-render-state="ready"]').waitFor();
+    await assertReferenceCylinder(mobile);
     await assertLayout(mobile, `viewport ${width}`);
     const pixels = await canvasStats(mobile);
     assert.ok(
@@ -243,25 +269,25 @@ try {
       fullPage: true,
     });
     if (width === 390) {
-      await mobile.getByRole("button", { name: "从工作台开始打印" }).click();
+      await mobile.getByRole("button", { name: "Start printing from the workbench" }).click();
       await mobile.waitForTimeout(1800);
-      await mobile.getByRole("button", { name: "暂停打印" }).click();
-      await mobile.getByRole("button", { name: "结束本次" }).click();
-      await mobile.getByRole("button", { name: "收藏这件作品" }).click();
-      await mobile.getByLabel("作品名称").fill("移动端试作");
+      await mobile.getByRole("button", { name: "Pause print" }).click();
+      await mobile.getByRole("button", { name: "Finish print" }).click();
+      await mobile.getByRole("button", { name: "Save this work" }).click();
+      await mobile.getByLabel("Work title").fill("移动端试作");
       await mobile
-        .getByRole("button", { name: "加入作品画廊", exact: true })
+        .getByRole("button", { name: "Add to gallery", exact: true })
         .click();
       await mobile
-        .getByRole("button", { name: "作品画廊", exact: true })
+        .getByRole("button", { name: "Gallery", exact: true })
         .click();
       await mobile
-        .getByRole("button", { name: "查看作品：移动端试作" })
+        .getByRole("button", { name: "View work: 移动端试作" })
         .click();
       await assertLayout(mobile, "mobile detail");
       await mobile.locator('.detail-scene .clay-scene[data-render-state="ready"]').waitFor();
       const imagePromise = mobile.waitForEvent("download");
-      await mobile.getByRole("button", { name: "保存作品图像" }).click();
+      await mobile.getByRole("button", { name: "Save image" }).click();
       const imageFile = await imagePromise;
       const imageData = (await readFile(await imageFile.path())).toString(
         "base64",
