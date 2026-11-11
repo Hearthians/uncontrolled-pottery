@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { TOTAL_STEPS } from "../src/simulation.ts";
 import { HEIGHTFIELD_PROFILE } from "../src/heightfieldSimulation.ts";
 import { generateMaterial } from "../src/pottery.ts";
-import { emotionAtStep } from "../src/emotionTrajectory.ts";
+// Individual tag scores are separate from the collective print trajectory.
 
 const url = new URL(process.env.POTTERY_URL || "http://127.0.0.1:5173");
 assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
@@ -30,13 +30,7 @@ try {
   const select = page.getByRole("combobox", { name: "Print physics model" });
   await expect(select).toHaveValue("heightfield");
   await expect(page.locator(".physics-note")).toContainText("no overhangs or fracture");
-  await page.getByLabel("Memories JSON file").setInputFiles({ name: "fictional.json", mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify([
-      "The light stayed on\nlong after everyone had left.",
-      "We took the longer way home.\nNeither of us asked why.",
-      "Rain on the windows.\nAn unfinished conversation.",
-      "For a moment,\nthere was nowhere else to be.",
-    ])) });
+  // Use the fabricated default fixture; analysis is covered by the dedicated workflow check.
   await expect(page.locator(".memory-counter")).toHaveText("01/4");
   await page.getByRole("button", { name: "Start printing from the workbench", exact: true }).click();
   await expect(select).toBeDisabled();
@@ -63,7 +57,7 @@ try {
   await expect(page.getByRole("button", { name: "Save this work", exact: true })).toBeVisible({ timeout: 30_000 });
   const stopped = await field(page);
   assert.ok(stopped.nodes < TOTAL_STEPS / 2);
-  assert.equal(await page.locator(".memory-active .emotion-stage h3").textContent(), emotionAtStep(stopped.nodes - 1).label);
+  await expect(page.locator('.memory-emotion-tag')).toHaveCount(5);
   await page.getByRole("button", { name: "Save this work", exact: true }).click();
   await page.getByLabel("Work title").fill("Experimental field test");
   await page.getByRole("button", { name: "Add to gallery", exact: true }).click();
@@ -90,9 +84,7 @@ try {
   assert.deepEqual(await field(page, ".detail-scene"), stopped, "saved V4 remains V4 on reload");
   await page.getByRole("button", { name: "Close work", exact: true }).click();
   await page.getByRole("button", { name: "Print studio", exact: true }).click();
-  await page.getByLabel("Memories JSON file").setInputFiles({ name: "fictional.json", mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(["We took the longer way home.\nNeither of us asked why.", "For a moment,\nthere was nowhere else to be."])) });
-  await expect(page.locator(".memory-counter")).toHaveText("01/2");
+  await expect(page.locator(".memory-counter")).toHaveText("01/4");
   await page.getByRole("button", { name: "Start printing from the workbench", exact: true }).click();
   await expect(page.getByRole("button", { name: "Save this work", exact: true })).toBeVisible({ timeout: 150_000 });
   const completed = await field(page);

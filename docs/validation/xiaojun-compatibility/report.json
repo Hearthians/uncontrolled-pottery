@@ -1,0 +1,156 @@
+{
+  "assessedAt": "2026-11-11T03:32:24.531Z",
+  "recipe": {
+    "geometry": {
+      "heightMm": 256,
+      "radiusMm": 48,
+      "baseProfile": "bulbous",
+      "modifier": "soft-organic-fold",
+      "seed": 42,
+      "parameters": {
+        "taper": -0.24,
+        "bulge": 0.32,
+        "foldAmplitude": 0.45,
+        "foldHeight": 0.58,
+        "foldSpread": 0.28
+      }
+    },
+    "sampling": {
+      "layerHeightMm": 4
+    },
+    "printing": {
+      "beadWidthMm": 6.8,
+      "feedrateMmMin": 1500
+    },
+    "validation": {
+      "safetyMarginMm": 5,
+      "maxLayerDisplacementMm": 1.4
+    }
+  },
+  "canonicalIdentical": true,
+  "geometryId": "gof-geometry-1.1.1-8aac8a0dec35a42ae42bf5523cebbb3666749d5310ff16a81b911040ecf80a0c",
+  "currentDecoder": "count-diversity-plump-strand-4",
+  "count": 1910,
+  "bands": [
+    {
+      "id": "region-1",
+      "count": 480,
+      "turns": 15,
+      "intensity": 0.6664307234857597
+    },
+    {
+      "id": "region-2",
+      "count": 536,
+      "turns": 17,
+      "intensity": 1
+    },
+    {
+      "id": "region-3",
+      "count": 456,
+      "turns": 14,
+      "intensity": 0.7289006109674335
+    },
+    {
+      "id": "region-4",
+      "count": 438,
+      "turns": 14,
+      "intensity": 0
+    }
+  ],
+  "upstreamPath": {
+    "layers": 64,
+    "closedContours": 64,
+    "independentLayerTransitions": 63,
+    "depositingTransitionCount": 63,
+    "nominalSeconds": 907.212112136297
+  },
+  "upstreamVisibleSection": {
+    "sides": 16,
+    "halfWidthMm": 3.3796600796440046,
+    "halfHeightMm": 2,
+    "heightWidthRatio": 0.5917754900991905,
+    "maximumEllipseEquationResidual": 0.6372804577269711
+  },
+  "coordinateAdapter": "[X,Y,Z] Z-up -> [X,Z,-Y] Y-up; apply to positions, normals and nozzle together",
+  "gapSchedule": {
+    "regionIntensityMappingExact": true,
+    "metrics": {
+      "eventCount": 2171,
+      "interruptedLayers": 46,
+      "interruptedLengthMm": 4880.522844132969,
+      "intendedExtrusionLengthMm": 22671.96947007412,
+      "missingDepositionRatio": 0.21526682322746676,
+      "averageGapLengthMm": 2.2480528991860753,
+      "maximumGapLengthMm": 2.999910187907517
+    },
+    "mixedOperatorsRejected": true
+  },
+  "operators": {
+    "bulges-global-0.7": {
+      "ok": false,
+      "elapsedMs": 661,
+      "error": "Overlapping swelling footprints require an accumulation model."
+    },
+    "offsets-combined-global-0.7": {
+      "ok": true,
+      "elapsedMs": 564,
+      "metrics": {
+        "eventCount": 4,
+        "affectedLayerCount": 57,
+        "maximumDisplacementMm": 10.249014075054378,
+        "requestedEventMagnitudeMm": 3.8759999999999994,
+        "requestedLocalLayers": 7,
+        "clearanceScale": 1,
+        "travelBoundaries": 6
+      },
+      "materialVertices": 620320,
+      "nominalCommandsRetained": false,
+      "sourceUnchanged": true
+    },
+    "sagging-reactive-global-1": {
+      "ok": true,
+      "elapsedMs": 6742,
+      "metrics": {
+        "regions": 0,
+        "weakRegions": 45,
+        "reactiveRegions": 0,
+        "expressiveEvents": 0,
+        "hangingLoops": 0,
+        "affectedLayers": 0,
+        "maximumDropMm": 0,
+        "hangingStrands": 0,
+        "slumps": 0,
+        "deformedSegments": 0,
+        "triangleQueries": 5626260
+      },
+      "materialVertices": 620512,
+      "nominalCommandsRetained": true,
+      "sourceUnchanged": true
+    },
+    "sagging-expressive-global-1": {
+      "ok": true,
+      "elapsedMs": 8633,
+      "metrics": {
+        "regions": 4,
+        "weakRegions": 52,
+        "reactiveRegions": 0,
+        "expressiveEvents": 4,
+        "hangingLoops": 4,
+        "affectedLayers": 4,
+        "maximumDropMm": 12.459186671769933,
+        "hangingStrands": 0,
+        "slumps": 0,
+        "deformedSegments": 226,
+        "triangleQueries": 4909308
+      },
+      "materialVertices": 620512,
+      "nominalCommandsRetained": false,
+      "sourceUnchanged": true
+    }
+  },
+  "sourceHashes": {
+    "src/topographyForm.ts": "1aef3579140806b86c5cb172cdd2112837ff8566a39c26f3ba352ad21152a51f",
+    "src/TopographyScene.tsx": "054a57aee445f08953e4cf23a1d7d8269c87071d856368c6ac2dfb84259c516e",
+    "src/memoryTopography.ts": "b76f00d6b50e4e316829e3fbe1912816031d00028f3ca415185ad6e3c8ee8095"
+  }
+}

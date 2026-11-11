@@ -1,0 +1,43 @@
+/* One sage hue encodes magnitude, not emotion identity. The values are printed
+   on every pill; unknown is distinct from zero. WCAG contrast was calculated
+   with the dataviz validate_palette.js contrast export: black on levels 0–4
+   is >= 4.82:1, white on level 5 is 7.48:1. */
+.memory-emotion-block { flex: 0 0 auto; min-width: 0; padding: 12px 0 0; }
+.memory-emotion-tags {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding: 4px 0 2px;
+}
+.memory-demo-note { flex-basis: 100%; color: #596659; font-size: 10px; letter-spacing: .04em; }
+.memory-emotion-tag {
+  display: inline-flex;
+  align-items: baseline;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  gap: 2px;
+  max-width: 100%;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #000;
+  background: #edf3ec;
+}
+.memory-emotion-tag b { font-size: inherit; font-weight: 700; font-variant-numeric: tabular-nums; }
+.memory-emotion-tag.level-unknown { background: #f3f3ee; border-color: #c5cdc1; }
+.memory-emotion-tag.level-0 { background: #edf3ec; }
+.memory-emotion-tag.level-1 { background: #d1e3d1; }
+.memory-emotion-tag.level-2 { background: #aed0b2; }
+.memory-emotion-tag.level-3 { background: #7fb391; }
+.memory-emotion-tag.level-4 { background: #478567; }
+.memory-emotion-tag.level-5 { background: #255f48; color: #fff; }
+@media (forced-colors: active) {
+  .memory-emotion-tag { color: CanvasText; background: Canvas; border-color: CanvasText; }
+}

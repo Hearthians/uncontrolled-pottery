@@ -1,5 +1,21 @@
+import { validateEntry } from "../shared/memoryAnalysis.ts";
+import type { Scores, ScoredMemoryEntry } from "../shared/memoryAnalysis.ts";
+
 // Imported text is session-only reading material, never part of a pottery record.
-export type MemoryEntry = { text: string };
+export type MemoryEntry = { text: string; scores?: Scores; demoScores?: boolean };
+
+export function validateAnalyzedMemories(value: unknown): ScoredMemoryEntry[] {
+  if (!Array.isArray(value) || !value.length || value.length > MAX_MEMORIES) throw new MemoryImportError("Invalid analyzed collection.");
+  let total = 0;
+  const ids = new Set<string>();
+  for (const entry of value) {
+    if (!validateEntry(entry) || !entry.text.trim() || entry.text.length > MAX_MEMORY_TEXT_LENGTH || ids.has(entry.id)) throw new MemoryImportError("Invalid analyzed collection.");
+    total += entry.text.length;
+    if (total > MAX_TOTAL_MEMORY_TEXT_LENGTH) throw new MemoryImportError("Invalid analyzed collection.");
+    ids.add(entry.id);
+  }
+  return value;
+}
 
 export const MAX_MEMORIES = 2_000;
 export const MAX_MEMORY_FILE_BYTES = 8 * 1024 * 1024;

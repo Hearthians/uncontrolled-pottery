@@ -43,16 +43,20 @@ import { HeightfieldSimulation } from "./heightfieldSimulation";
 import "./studioPhysics.css";
 import {
   COLLECTIVE_EMOTION_PLAN,
-  emotionAtStep,
   emotionPlanToEvents,
 } from "./emotionTrajectory";
 import { createArchive, MAX_ARCHIVE_BYTES, parseArchive } from "./archive";
 import { MemoryPlayback } from "./MemoryPlayback";
 import { useMemorySource } from "./useMemorySource";
+import { compileMemoryPrintPlan } from "./memoryPrintPlan";
+import { validateScores } from "../shared/memoryAnalysis";
+import type { Scores } from "../shared/memoryAnalysis";
 
 type Status = "ready" | "printing" | "paused" | "complete";
 type Page = "studio" | "gallery";
 const STORAGE_KEY = "uncontrolled-pottery-v1";
+// Playback speed is presentation-only: archive and simulation timing stay unchanged.
+const PRINT_PLAYBACK_SECONDS = 90;
 const thumbnailCache = new Map<string, string>();
 
 function readCollection(): Pottery[] {
@@ -203,7 +207,7 @@ function GalleryItem({
         <div>
           <h3>{pottery.title}</h3>
           <span>
-            {pottery.preset ? "Studio study" : "My collection"} <i />{" "}
+            {pottery.memoryPrintPlan?.source === "demo" ? "Random demo" : pottery.preset ? "Studio study" : "My collection"} <i />{" "}
             {Math.ceil(pottery.steps / SEGMENTS)} layers
           </span>
         </div>
@@ -217,18 +221,22 @@ function GalleryItem({
 }
 
 export default function App() {
-  const initialEmotion = COLLECTIVE_EMOTION_PLAN.trajectory[0];
   const [page, setPage] = useState<Page>("studio");
   const [status, setStatus] = useState<Status>("ready");
   const [physics, setPhysics] = useState<"strand" | "heightfield">(
     new URLSearchParams(location.search).get("physics") === "heightfield" ? "heightfield" : "strand",
   );
-  const [currentEmotion, setCurrentEmotion] = useState(initialEmotion);
+  const [selectedPrintMode, setPrintMode] = useState<"collective" | "analyzed" | "demo" | null>(null);
   const [progress, setProgress] = useState(0);
   const [depositedSteps, setDepositedSteps] = useState(0);
   // Session-only text survives studio/gallery navigation, never enters a work record.
   const memorySource = useMemorySource(status === "printing" || status === "paused");
-  const { memories, canStart: canStartPrint } = memorySource;
+  const { memories } = memorySource;
+  const printMode = selectedPrintMode ?? (memorySource.defaultScores === "analyzed" ? "analyzed" : memorySource.defaultScores === "demo" ? "demo" : "collective");
+  const hasAnalyzedScores = memories.length > 0 && memories.every(memory => !memory.demoScores && validateScores(memory.scores));
+  const hasDemoScores = memories.length > 0 && memories.every(memory => memory.demoScores && validateScores(memory.scores));
+  const modeAvailable = printMode === "collective" || (printMode === "analyzed" ? hasAnalyzedScores : hasDemoScores);
+  const canStartPrint = memorySource.canStart && modeAvailable;
   const [planned, setPlanned] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [view, setView] = useState<"perspective" | "front" | "top">(
@@ -254,10 +262,14 @@ export default function App() {
     pottery: Pottery;
     engine: PlasticSimulation | HeightfieldSimulation;
     elapsed: number;
+    contributions?: { start: number; end: number }[];
+    blendedScores?: Scores[];
+    memorySource?: typeof memories;
   } | null>(null);
   const allWorks = [...collection, ...PRESETS];
   const currentPottery = runRef.current?.pottery ?? PRESETS[0];
   const currentLayer = runRef.current ? Math.min(LAYERS, Math.ceil(currentPottery.steps / SEGMENTS)) : 0;
+  const planLayer = Math.max(0, Math.min(LAYERS - 1, Math.floor(Math.max(0, depositedSteps - 1) / SEGMENTS)));
   const isActive = status === "printing" || status === "paused";
   const finishing = !!runRef.current && runRef.current.engine.tick >= runRef.current.engine.stopStep;
 
@@ -325,10 +337,7 @@ export default function App() {
       if (!document.hidden) run.elapsed += delta;
       const engine = run.engine;
       const started = profileRef.current ? performance.now() : 0;
-      engine.advanceTo(Math.floor(run.elapsed / DURATION * MATERIAL_TICKS), run.pottery.events);
-      // Match the last deposited layer's event on the original 64-layer plan.
-      // Neither early-stop runout nor settling should fast-forward the emotion arc.
-      const emotion = emotionAtStep(Math.max(0, engine.deposits.length - 1), run.pottery.emotionPlan);
+      engine.advanceTo(Math.floor(run.elapsed / PRINT_PLAYBACK_SECONDS * MATERIAL_TICKS), run.pottery.events);
       const simulated = profileRef.current ? performance.now() : 0;
       sceneRef.current?.append(engine.deposits, engine.dirtyStart, engine.nozzle,
         engine instanceof HeightfieldSimulation ? engine.surface : undefined);
@@ -344,7 +353,6 @@ export default function App() {
       if (now - uiTime > 70 || engine.complete) {
         setProgress(engine.tick / MATERIAL_TICKS);
         setDepositedSteps(engine.deposits.length);
-        setCurrentEmotion(emotion);
         uiTime = now;
       }
       if (engine.complete) {
@@ -357,30 +365,31 @@ export default function App() {
   }, [status]);
 
   function startPrint() {
-    if (!memorySource.source.canStart) return;
+    if (!memorySource.source.canStart || !modeAvailable) return;
+    const plan = printMode === "collective" ? null : compileMemoryPrintPlan(memories, printMode);
     const seed = Math.floor(Math.random() * 100000);
     const engine = physics === "heightfield" ? new HeightfieldSimulation(seed) : new PlasticSimulation(seed);
-    const events = emotionPlanToEvents();
-    setCurrentEmotion(COLLECTIVE_EMOTION_PLAN.trajectory[0]);
+    const events = plan?.events ?? emotionPlanToEvents();
     const pottery: Pottery = {
       id:
         typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `pottery-${Date.now()}-${seed}`,
-      title: COLLECTIVE_EMOTION_PLAN.title,
+      title: plan ? (printMode === "demo" ? "Random memory demo" : "Memory impressions") : COLLECTIVE_EMOTION_PLAN.title,
       seed,
       steps: 0,
       events,
       createdAt: new Date().toISOString(),
       duration: 0,
       simulation: engine.record(),
-      emotionPlan: structuredClone(COLLECTIVE_EMOTION_PLAN),
+      ...(plan ? { memoryPrintPlan: { version: 1 as const, mapping: "memory-supply-1" as const, source: printMode as "demo" | "analyzed", memoryCount: memories.length } }
+        : { emotionPlan: structuredClone(COLLECTIVE_EMOTION_PLAN) }),
     };
-    runRef.current = { pottery, engine, elapsed: 0 };
+    runRef.current = { pottery, engine, elapsed: 0, contributions: plan?.contributions, blendedScores: plan?.blendedScores, memorySource: plan ? memories : undefined };
     setProgress(0);
     setDepositedSteps(0);
     setSavedId(null);
-    setAutoRotate(false);
+    setAutoRotate(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setView("perspective");
     sceneRef.current?.reset(engine.record().version);
     setStatus("printing");
@@ -572,6 +581,15 @@ export default function App() {
               </div>
               <div className="heading-actions">
                 <label className="physics-choice">
+                  <span>Print behavior</span>
+                  <select aria-label="Print behavior" value={printMode} disabled={isActive}
+                    onChange={(event) => setPrintMode(event.target.value as "collective" | "analyzed" | "demo")}>
+                    <option value="collective">Collective arc</option>
+                    <option value="analyzed" disabled={!hasAnalyzedScores}>Memory scores</option>
+                    <option value="demo" disabled={!hasDemoScores}>Random scores · demo</option>
+                  </select>
+                </label>
+                <label className="physics-choice">
                   <span>{status === "complete" ? "Next print" : "Physics"}</span>
                   <select aria-label="Print physics model" value={physics} disabled={isActive}
                     onChange={(event) => setPhysics(event.target.value as "strand" | "heightfield")}>
@@ -591,7 +609,7 @@ export default function App() {
                   initial={currentPottery}
                   initialNozzle={runRef.current?.engine.nozzle}
                   planned={planned}
-                  autoRotate={autoRotate}
+                  autoRotate={autoRotate && status !== "paused"}
                   printing={isActive}
                   onError={() => setWebglError(true)}
                 />
@@ -702,9 +720,15 @@ export default function App() {
                   <MemoryPlayback
                     key={runRef.current?.pottery.id ?? "preview"}
                     memories={memories}
-                    emotion={currentEmotion.label}
+                    emotion=""
+                    printContribution={runRef.current?.memorySource === memories ? runRef.current?.contributions?.[planLayer] : undefined}
+                    printScores={runRef.current?.memorySource === memories ? runRef.current?.blendedScores?.[planLayer] : undefined}
+                    printEvent={runRef.current?.memorySource === memories ? runRef.current?.pottery.events[planLayer] : undefined}
+                    printLayer={planLayer + 1}
+                    printPlanSource={runRef.current?.pottery.memoryPrintPlan?.source}
                     sourceState={memorySource}
                     source={memorySource.source}
+                    onAnalysisApplied={() => setPrintMode(current => current ?? "analyzed")}
                     depositedSteps={depositedSteps}
                     totalSteps={TOTAL_STEPS}
                     status={status}
@@ -712,13 +736,13 @@ export default function App() {
                 </div>
                 <div className="print-actions">
                   {!canStartPrint && !isActive && <p id="memory-start-note" className="memory-start-note">
-                    {memorySource.phase === "loading" ? "Loading memories before printing…" : "Load memories to start printing."}
+                    {memorySource.analysisPending ? "Finish or cancel memory analysis before printing." : memorySource.phase === "loading" ? "Loading memories before printing…" : !modeAvailable ? "The selected behavior requires matching scores. Choose another behavior or analyze memories." : "Load memories to start printing."}
                   </p>}
                   {status === "ready" && (
                     <button className="primary-button" onClick={startPrint} disabled={!canStartPrint} aria-describedby={!canStartPrint ? "memory-start-note" : undefined}>
                       <Play size={17} fill="currentColor" />
                       <span>Start print</span>
-                      <span className="button-time">55 s</span>
+                      <span className="button-time">{PRINT_PLAYBACK_SECONDS} s</span>
                     </button>
                   )}
                   {status === "printing" && (
@@ -729,7 +753,7 @@ export default function App() {
                       <Pause size={17} fill="currentColor" />
                       <span>Pause print</span>
                       <span className="button-time">
-                        {Math.max(0, Math.ceil(DURATION * (1 - progress)))} s
+                        {Math.max(0, Math.ceil(PRINT_PLAYBACK_SECONDS * (1 - progress)))} s
                       </span>
                     </button>
                   )}
@@ -741,7 +765,7 @@ export default function App() {
                       <Play size={17} fill="currentColor" />
                       <span>Resume print</span>
                       <span className="button-time">
-                        {Math.max(0, Math.ceil(DURATION * (1 - progress)))} s
+                        {Math.max(0, Math.ceil(PRINT_PLAYBACK_SECONDS * (1 - progress)))} s
                       </span>
                     </button>
                   )}
@@ -815,9 +839,9 @@ export default function App() {
                       </b>
                     </span>
                     <span className="time-code">
-                      {timeLabel(progress * DURATION)}
+                      {timeLabel(progress * PRINT_PLAYBACK_SECONDS)}
                       <i>/</i>
-                      {timeLabel(DURATION)}
+                      {timeLabel(PRINT_PLAYBACK_SECONDS)}
                     </span>
                   </div>
                   <div
@@ -1023,6 +1047,8 @@ export default function App() {
                 <b>Gray-white wet clay</b>
                 <span>Physics</span>
                 <b>{selected.simulation?.version === 4 ? "V4 · experimental height field" : `V${selected.simulation?.version ?? 1} · strand`}</b>
+                <span>Print behavior</span>
+                <b>{selected.memoryPrintPlan ? (selected.memoryPrintPlan.source === "demo" ? "Random scores · demo" : "Memory scores") : "Recorded process"}</b>
                 <span>Process events</span>
                 <b>{selected.events.length}</b>
               </div>
@@ -1172,11 +1198,11 @@ export default function App() {
               <X size={19} />
             </IconButton>
             <h2 id="guide-title">Memory, into clay.</h2>
-            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.summary}</p>
+            <p className="guide-method-note">Choose the collective arc or blend memory scores across the print. Random scores are a labeled demo, not analysis.</p>
             <ol className="guide-steps">
               <li>
                 <div className="guide-symbol"><Sparkles size={26} /></div>
-                <div><h3>Agent-composed memories</h3><p>1,910 memories, with names removed, form a twelve-stage emotion arc.</p></div>
+                <div><h3>Memories and scores</h3><p>Use the existing collective arc or let a complete set of memory scores shape the supply.</p></div>
               </li>
               <li>
                 <div className="guide-symbol guide-mapping"><span>Base</span><span>Top</span></div>
@@ -1187,7 +1213,7 @@ export default function App() {
                 <div><h3>Automatic printing</h3><p>No manual parameter controls. You can still pause, resume, or finish early.</p></div>
               </li>
             </ol>
-            <p className="guide-method-note">{COLLECTIVE_EMOTION_PLAN.methodNote} Both physics modes are uncalibrated. The original strand model is V3. Experimental V4 adapts the Lab’s volume-conserving height field to the circular path: pressure spreads clay on a flat substrate, but it cannot represent overhangs, internal voids, fracture, or realistic layer grooves. A tall vessel exceeds its shallow-layer assumptions. Choose before printing; saved works retain their model.</p>
+            <p className="guide-method-note">The collective arc is a dramatic composition, not a shared chronology or diagnosis. Score-to-supply rules are artistic interpretations. Both physics modes are uncalibrated. The original strand model is V3. Experimental V4 adapts the Lab’s volume-conserving height field to the circular path: pressure spreads clay on a flat substrate, but it cannot represent overhangs, internal voids, fracture, or realistic layer grooves. A tall vessel exceeds its shallow-layer assumptions. Choose before printing; saved works retain their model.</p>
             <div className="guide-actions">
               <button className="primary-button" onClick={closeGuide}>
                 <Check size={17} />Enter studio

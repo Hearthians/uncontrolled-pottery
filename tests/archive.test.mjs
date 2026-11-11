@@ -117,6 +117,57 @@ test("an older emotion mapping and its recorded sag events are not recompiled on
   assert.deepEqual(parseArchive(JSON.stringify(createArchive(pottery))), { ...pottery, preset: false });
 });
 
+test("optional memory print provenance round-trips without changing recorded-event replay across v1–v4", () => {
+  const { pottery: plastic } = plasticFixture();
+  const engine = new HeightfieldSimulation(91);
+  const events = [{ step: 0, fluctuation: 13, interruption: 2, sag: true },
+    { step: 160, fluctuation: 61, interruption: 17, sag: true }];
+  engine.advanceTo(320, events);
+  engine.stop();
+  engine.advanceTo(MATERIAL_TICKS, events);
+  const heightfield = { ...LEGACY_PRESETS[0], seed: 91, events,
+    steps: engine.deposits.length, simulation: engine.record() };
+  for (const original of [LEGACY_PRESETS[0], PRESETS[0], plastic, heightfield]) {
+    for (const source of ["analyzed", "demo"]) {
+      const memoryPrintPlan = { version: 1, mapping: "memory-supply-1", source, memoryCount: 2000 };
+      const pottery = { ...original, memoryPrintPlan };
+      const archive = createArchive(pottery);
+      assert.equal(archive.version, original.simulation?.version ?? 1);
+      const restored = parseArchive(JSON.stringify(archive));
+      assert.deepEqual(restored, { ...pottery, preset: false });
+      assert.deepEqual(restored.events, original.events);
+      assert.deepEqual(generateMaterial(restored), generateMaterial(original));
+      assert.deepEqual(Object.keys(archive.pottery.memoryPrintPlan).sort(),
+        ["mapping", "memoryCount", "source", "version"]);
+    }
+  }
+});
+
+test("memory print provenance strictly rejects malformed or private fields on save and import", () => {
+  const plan = { version: 1, mapping: "memory-supply-1", source: "analyzed", memoryCount: 1 };
+  for (const invalid of [
+    null, [], "plan", {},
+    { ...plan, version: 2 }, { ...plan, version: "1" },
+    { ...plan, mapping: "memory-supply-2" }, { ...plan, source: "random" },
+    ...[0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, "1", null].map(
+      (memoryCount) => ({ ...plan, memoryCount })),
+    { ...plan, text: "PRIVATE MEMORY" },
+    { ...plan, scores: { calm: 5 } },
+    { ...plan, memories: [{ text: "PRIVATE MEMORY", scores: [5] }] },
+  ]) {
+    const pottery = { ...PRESETS[0], memoryPrintPlan: invalid };
+    assert.equal(isPottery(pottery), false);
+    assert.throws(() => createArchive(pottery));
+    const archive = { ...createArchive(PRESETS[0]), pottery };
+    assert.throws(() => parseArchive(JSON.stringify(archive)));
+  }
+  const pottery = { ...PRESETS[0], memoryPrintPlan: plan };
+  const serialized = JSON.stringify(createArchive(pottery));
+  assert.equal(serialized.includes("PRIVATE MEMORY"), false);
+  assert.equal(serialized.includes('"scores"'), false);
+  assert.deepEqual(parseArchive(serialized).memoryPrintPlan, plan);
+});
+
 test("malformed and unsupported archives are rejected before reconstruction", () => {
   const archive = createArchive(PRESETS[0]);
   for (const invalid of [null, {}, { ...archive, version: 99 },

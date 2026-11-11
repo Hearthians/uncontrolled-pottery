@@ -1,0 +1,20 @@
+.memory-import-dialog { width: min(600px, calc(100vw - 32px)); max-height: min(90vh, 900px); border: 1px solid #b7c2b2; padding: 0; color: #29372f; background: #fdfefb; }
+.memory-import-dialog::backdrop { background: #17241cad; }
+.memory-import-content { padding: 22px; font-size: 13px; line-height: 1.5; }
+.memory-import-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.memory-import-heading h2 { margin: 0; font: 400 26px Georgia, serif; }
+.memory-import-heading button { font-size: 24px; min-width: 36px; min-height: 36px; }
+.memory-import-content label:not(.memory-consent) { display: block; margin: 14px 0 4px; font-weight: 600; }
+.memory-import-content textarea, .memory-import-content input[type="password"] { width: 100%; box-sizing: border-box; border: 1px solid #9da99c; padding: 8px; background: white; color: #17241c; font: inherit; }
+.memory-import-content textarea { resize: vertical; }
+.memory-import-content input[type="file"] { max-width: 100%; }
+.memory-consent { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0; }
+.memory-import-content button { cursor: pointer; }
+.memory-import-content button:disabled { cursor: not-allowed; opacity: .5; }
+.memory-import-primary { padding: 10px 14px; color: white; background: #913b29; border: 1px solid #913b29; }
+.memory-review ol { max-height: 40vh; overflow: auto; padding-left: 24px; overflow-wrap: anywhere; }
+.memory-review li { padding: 8px 0; border-bottom: 1px solid #d5dbd1; }
+.memory-review li p { white-space: pre-wrap; margin: 0 0 5px; }
+.memory-review small { font-size: 11px; }
+.memory-import-content :focus-visible { outline: 2px solid #913b29; outline-offset: 2px; }
+@media (forced-colors: active) { .memory-import-dialog, .memory-import-primary { color: CanvasText; background: Canvas; border-color: CanvasText; } }

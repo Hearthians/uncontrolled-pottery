@@ -1,0 +1,15 @@
+import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { basename, dirname } from 'node:path';
+const file = new URL('../artifacts/default-minimax-20261103/scores.json', import.meta.url);
+const raw = await readFile(file, 'utf8');
+const data = JSON.parse(raw);
+if (data.version !== 1 || data.model !== 'MiniMax-M3.1-Flash' || data.results?.length !== 1910 || data.results.some((x,i)=>x.index!==i || !x.scores || !['calm','anxiety','anger','stress','sadness'].every(k=>Number.isInteger(x.scores[k])&&x.scores[k]>=0&&x.scores[k]<=5))) throw new Error('Default scores are incomplete or invalid');
+const corpus = await readFile(new URL('../public/memories.json', import.meta.url));
+const corpusSha256 = createHash('sha256').update(corpus).digest('hex');
+const output = { version:1, model:data.model, prompt:data.prompt, corpusSha256, scores:data.results.map(x=>x.scores) };
+const target = new URL('../public/default-memory-scores.json', import.meta.url);
+const tmp = new URL(`../public/.${basename(target.pathname)}.${process.pid}.tmp`, import.meta.url);
+await writeFile(tmp, JSON.stringify(output)+'\n', {flag:'wx',mode:0o644});
+await rename(tmp,target);
+console.log(`Wrote ${output.scores.length} scores for corpus ${corpusSha256}`);

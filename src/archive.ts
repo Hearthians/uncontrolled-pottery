@@ -1,4 +1,4 @@
-import { DURATION, LAYERS, SEGMENTS, TOTAL_STEPS, isPottery } from "./pottery.ts";
+import { DURATION, LAYERS, SEGMENTS, TOTAL_STEPS, isMemoryPrintPlan, isPottery } from "./pottery.ts";
 import type { Pottery } from "./pottery.ts";
 import { MATERIAL_DT, MATERIAL_PROFILE, MATERIAL_TICKS } from "./materialSimulation.ts";
 import { PLASTIC_PROFILE } from "./plasticSimulation.ts";
@@ -7,6 +7,9 @@ import { HEIGHTFIELD_PROFILE } from "./heightfieldSimulation.ts";
 export const MAX_ARCHIVE_BYTES = 2 * 1024 * 1024;
 
 export function createArchive(pottery: Pottery) {
+  // Do not export unrecognized provenance fields, which could contain private data.
+  if (pottery.memoryPrintPlan !== undefined && !isMemoryPrintPlan(pottery.memoryPrintPlan))
+    throw new Error("Invalid memory print plan");
   return {
     format: "uncontrolled-pottery",
     version: pottery.simulation?.version ?? 1,

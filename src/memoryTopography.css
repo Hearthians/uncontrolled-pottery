@@ -1,0 +1,82 @@
+.memory-topography-page { --topography-line: #d6cdbf; --topography-muted: #887b6c; max-width: 1504px; margin: 0 auto; padding: 30px 54px 32px; color: #443425; background: #f4efe6; min-height: 100vh; }
+body:has(.memory-topography-page) { background: #f4efe6; }
+.memory-topography-page a { color: inherit; text-underline-offset: 5px; }
+.memory-topography-page a:focus-visible { outline: 2px solid #a65d40; outline-offset: 5px; }
+.topography-header { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--topography-line); padding-bottom: 23px; font-size: 10px; letter-spacing: .06em; }
+.topography-header a { text-decoration: none; }
+.topography-title { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; padding: 42px 0 34px; }
+.topography-kicker { color: #967758; font: 10px var(--mono); letter-spacing: .14em; }
+.topography-title h1, .topography-loading h1 { font: 400 clamp(42px, 5vw, 68px)/1.3 Georgia, "Noto Serif CJK SC", serif; margin: 11px 0 13px; }
+.topography-title > div > p:last-child { color: #7e6a57; font-size: 14px; }
+.topography-edition { text-align: right; padding-bottom: 5px; }
+.topography-edition strong { font: 42px/1.1 Georgia, serif; display: block; }
+.topography-edition span { display: block; margin-top: 14px; font-size: 11px; color: var(--topography-muted); }
+.topography-artwork { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr); gap: 46px; align-items: start; }
+.topography-object { margin: 0; }
+.topography-image { position: relative; aspect-ratio: 1000 / 1160; background: #eee8de; overflow: hidden; }
+.topography-image > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.topography-canvas { position: absolute; inset: 0; }
+.topography-canvas canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; cursor: grab; }
+.topography-canvas[data-dragging="true"] canvas { cursor: grabbing; }
+.topography-image > p { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--topography-muted); }
+.topography-image .topography-rendering { inset: auto 0 24px; text-align: center; display: block; }
+.topography-object figcaption { display: flex; justify-content: space-between; gap: 15px; padding-top: 14px; color: var(--topography-muted); font: 10px var(--mono); }
+.topography-playback { margin-top: 20px; color: #7e6a57; font-size: 11px; }
+.topography-playback-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.topography-playback-row > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.topography-view-hint { margin-top: 11px; font-size: 10px; color: var(--topography-muted); }
+.topography-playback button { padding: 7px 10px; border: 1px solid var(--topography-line); border-radius: 2px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.topography-playback button:hover { background: #e9e0d3; }
+.topography-playback button:focus-visible { outline: 2px solid #a65d40; outline-offset: 3px; }
+.topography-playback button:disabled { opacity: .45; cursor: default; }
+.topography-progress { height: 2px; margin-top: 12px; background: #ded5c9; overflow: hidden; }
+.topography-progress > span { display: block; height: 100%; background: #a76340; }
+.topography-reading { padding: 15px 0 0; }
+.topography-reading-heading { padding-bottom: 27px; }
+.topography-reading-heading h2 { font: 400 25px/1.5 "Noto Serif CJK SC", "Songti SC", serif; }
+.topography-reading-heading p { font-size: 12px; color: var(--topography-muted); margin-top: 9px; }
+.topography-legend-layout { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 20px; }
+.topography-height-key { display: flex; flex-direction: column; gap: 10px; align-items: stretch; padding: 0 0 6px; }
+.topography-ruler-end { text-align: center; font-size: 10px; color: var(--topography-muted); }
+.topography-height-stack { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.topography-height-stack > div { flex-basis: 0; display: grid; place-items: center; min-height: 15px; }
+.topography-height-stack span { writing-mode: vertical-rl; color: #faf6ee; font: 10px var(--mono); }
+.topography-legends { display: flex; flex-direction: column; }
+.topography-legend { border-top: 1px solid var(--topography-line); padding: 15px 0 17px; }
+.topography-legend:first-child { border-top: 2px solid var(--band-color); }
+.topography-legend > header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.topography-legend h3 { font: 20px var(--mono); color: var(--band-color); }
+.topography-legend header span { font-size: 12px; }
+.topography-legend-metrics { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 10px; color: var(--topography-muted); margin-top: 10px; }
+.topography-legend blockquote { margin: 13px 0 8px; font: 15px/1.6 Georgia, "Noto Serif CJK SC", serif; }
+.topography-source { font-size: 9px; color: var(--topography-muted); }
+.topography-reading-note { border-top: 1px solid var(--topography-line); padding-top: 16px; margin: 13px 0 0 58px; font-size: 10px; line-height: 1.8; color: var(--topography-muted); }
+.topography-caption { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 42px; margin-top: 40px; padding: 26px 0; border-top: 1px solid var(--topography-line); border-bottom: 1px solid var(--topography-line); }
+.topography-caption span { font-size: 11px; color: #a06541; }
+.topography-caption p { margin-top: 12px; font-size: 12px; line-height: 1.9; color: #756958; }
+.topography-footer { padding-top: 20px; color: var(--topography-muted); font-size: 10px; line-height: 1.9; }
+.topography-footer > div { display: flex; gap: 22px; margin-top: 10px; }
+.topography-render-metrics { display: block; margin-top: 10px; font-family: var(--mono); }
+.topography-loading { padding: 50px 0; }
+@media (max-width: 1100px) {
+  .memory-topography-page { padding: 26px 32px; }
+  .topography-artwork { gap: 28px; grid-template-columns: minmax(0, 1.2fr) minmax(310px, 1fr); }
+  .topography-legend-layout { gap: 14px; grid-template-columns: 30px minmax(0, 1fr); }
+  .topography-legend blockquote { font-size: 14px; }
+  .topography-reading-note { margin-left: 44px; }
+}
+@media (max-width: 760px) {
+  .memory-topography-page { padding: 22px 20px 30px; }
+  .topography-header { font-size: 9px; }
+  .topography-title { padding: 32px 0 25px; align-items: center; gap: 15px; }
+  .topography-kicker { font-size: 8px; letter-spacing: .04em; max-width: 190px; line-height: 1.8; }
+  .topography-title h1 { font-size: clamp(30px, 8.5vw, 42px); }
+  .topography-title > div > p:last-child { font-size: 11px; }
+  .topography-edition strong { font-size: 29px; }
+  .topography-edition span { font-size: 9px; max-width: 95px; line-height: 1.9; margin-top: 8px; }
+  .topography-artwork { grid-template-columns: 1fr; gap: 26px; }
+  .topography-reading { padding-top: 0; }
+  .topography-legend blockquote { font-size: 15px; }
+  .topography-reading-heading { padding-bottom: 20px; }
+  .topography-caption { grid-template-columns: 1fr; gap: 22px; margin-top: 26px; }
+}

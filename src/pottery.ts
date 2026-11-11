@@ -16,7 +16,31 @@ import type { EmotionPlan } from "./emotionTrajectory.ts";
 
 export { DURATION, LAYERS, SEGMENTS, TOTAL_STEPS, meanSettings } from "./simulation.ts";
 export type { Settings, ProcessEvent } from "./simulation.ts";
-export type Pottery = LegacyPottery & { simulation?: MaterialRecord | PlasticRecord | HeightfieldRecord; emotionPlan?: EmotionPlan };
+export type MemoryPrintPlan = {
+  version: 1;
+  mapping: "memory-supply-1";
+  source: "analyzed" | "demo";
+  memoryCount: number;
+};
+export type Pottery = LegacyPottery & {
+  simulation?: MaterialRecord | PlasticRecord | HeightfieldRecord;
+  emotionPlan?: EmotionPlan;
+  memoryPrintPlan?: MemoryPrintPlan;
+};
+
+/** Only the minimal provenance is accepted; raw memories and scores must not be included. */
+export function isMemoryPrintPlan(value: unknown): value is MemoryPrintPlan {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== 4 || !["version", "mapping", "source", "memoryCount"].every((key) => keys.includes(key))) return false;
+  const plan = value as MemoryPrintPlan;
+  return plan.version === 1 && plan.mapping === "memory-supply-1" &&
+    (plan.source === "analyzed" || plan.source === "demo") &&
+    Number.isSafeInteger(plan.memoryCount) && plan.memoryCount > 0;
+}
+
 export type SceneDeposit = Deposit & { halfHeight?: number; breakBefore?: boolean };
 export const DEFAULT_SETTINGS = { fluctuation: 0, interruption: 0, sag: true };
 
@@ -28,7 +52,8 @@ export function isPottery(value: unknown): value is Pottery {
       validMaterialRecord(pottery.simulation, pottery.steps) ||
       validPlasticRecord(pottery.simulation, pottery.steps) ||
       validHeightfieldRecord(pottery.simulation, pottery.steps)) &&
-      (pottery.emotionPlan === undefined || isEmotionPlan(pottery.emotionPlan));
+      (pottery.emotionPlan === undefined || isEmotionPlan(pottery.emotionPlan)) &&
+      (pottery.memoryPrintPlan === undefined || isMemoryPrintPlan(pottery.memoryPrintPlan));
   } catch {
     return false;
   }

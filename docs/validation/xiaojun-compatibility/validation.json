@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-11-11T03:38:08.210Z",
+  "upstreamTests": {
+    "passed": 171,
+    "failed": 0
+  },
+  "upstreamDemo": {
+    "passed": 5,
+    "failed": 0
+  },
+  "typecheck": true,
+  "crossSnapshotTypecheck": true,
+  "productionBuild": {
+    "passed": true,
+    "outDir": "/tmp/xiaojun-compat-build-DEOoxG",
+    "entry": "index-ClOx6zKB.js",
+    "warning": "Existing >500 kB JavaScript bundle advisory"
+  },
+  "browser": {
+    "rerun": false,
+    "knownHandoffDeploymentFailure": "Upstream full browser suite previously timed out waiting for Resume in Gaps; source DEPLOYMENT.md. Assessment does not claim browser integration is verified."
+  },
+  "appSourceHashesUnchanged": true
+}

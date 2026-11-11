@@ -111,7 +111,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
   assert.equal(await page.getByRole("dialog").count(), 0, "guidance is on demand, not an opening wall of text");
   await page.getByRole("button", { name: "How it works", exact: true }).last().click();
-  assert.match(await page.locator(".guide-steps").innerText(), /with names removed/);
+  assert.match(await page.locator(".guide-steps").innerText(), /complete set of memory scores/);
   assert.match(await page.locator(".guide-method-note").last().innerText(), /Both physics modes are uncalibrated/);
   assert.match(await page.locator(".guide-method-note").last().innerText(), /Experimental V4/);
   for (const selector of ['.topbar', '.nav-rail', '.guide-modal', '.print-actions'])

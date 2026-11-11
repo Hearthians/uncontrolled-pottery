@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "analysis:server": "node --experimental-strip-types server/index.ts",
+    "verify:emotion-tags": "node scripts/verify-emotion-tags.mjs",
     "build": "tsc -b && vite build",
     "build:public": "tsc -b && vite build --base=/pottery/ --outDir=dist-public",
     "public:start": "node scripts/public-forward.mjs start",
@@ -16,14 +18,23 @@
     "verify:memories": "node scripts/verify-memories.mjs",
     "verify:lab": "node scripts/verify-deposition-lab.mjs",
     "verify:heightfield": "node scripts/verify-heightfield.mjs",
+    "study:regions": "node scripts/build-memory-regions.mjs",
+    "study:topography": "node scripts/build-memory-topography.mjs",
+    "verify:topography": "node scripts/verify-memory-topography.mjs",
+    "verify:regions": "node scripts/verify-memory-regions.mjs",
     "verify:default-memories": "node scripts/verify-default-memories.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "csv-parse": "^7.0.3",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.13.0",
+    "openai": "^7.47.0",
+    "pdfjs-dist": "^6.5.438",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
@@ -31,6 +42,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.180.0",
+    "@types/yauzl": "^3.4.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.9.3",
     "vite": "^7.1.0"

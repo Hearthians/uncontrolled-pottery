@@ -4,6 +4,7 @@ import { ClayStrand, PlasticSimulation, PLASTIC_PROFILE } from "../src/plasticSi
 import { BASE_RADIUS, LAYER_HEIGHT, SEGMENTS, TOTAL_STEPS } from "../src/simulation.ts";
 import { MATERIAL_TICKS, MATERIAL_PROFILE, RUNOUT_STEPS } from "../src/materialSimulation.ts";
 import { emotionPlanToEvents } from "../src/emotionTrajectory.ts";
+import { compileMemoryPrintPlan } from "../src/memoryPrintPlan.ts";
 
 const ds = 2 * Math.PI * BASE_RADIUS / SEGMENTS;
 const volume = Math.PI * (MATERIAL_PROFILE.nozzleMm * 0.55 / MATERIAL_PROFILE.millimetersPerUnit) * LAYER_HEIGHT / 2 * ds;
@@ -20,6 +21,22 @@ function assertBounded(simulation) {
   const deposited = simulation.deposits.reduce((sum, p) => sum + p.volume, 0);
   assert.ok(Math.abs(deposited + simulation.tipVolume - simulation.deliveredVolume) < 1e-9);
 }
+
+test("memory scores alter simulated supply and deposits under a fixed seed", () => {
+  const calm = { calm: 5, anxiety: 0, anger: 0, stress: 0, sadness: 0 };
+  const intense = { calm: 0, anxiety: 5, anger: 5, stress: 5, sadness: 5 };
+  const run = (scores) => {
+    const simulation = new PlasticSimulation(19);
+    simulation.advanceTo(3500, compileMemoryPrintPlan([{ scores }], "analyzed").events);
+    assertBounded(simulation);
+    return simulation;
+  };
+  const stableRun = run(calm), variedRun = run(intense);
+  assert.equal(stableRun.pulses.length, 0);
+  assert.ok(variedRun.pulses.length > 0);
+  assert.ok(variedRun.deposits.some((deposit) => deposit.gap));
+  assert.notEqual(stableRun.deliveredVolume, variedRun.deliveredVolume);
+});
 
 test("a dropped strand settles on contact, widens plastically and conserves its volume", () => {
   const body = new ClayStrand(() => 0);

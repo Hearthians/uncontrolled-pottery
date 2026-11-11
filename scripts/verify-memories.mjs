@@ -4,7 +4,7 @@ import { mockDefaultMemories, MEMORY_FIXTURE } from "./memory-fixture.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
 import { TOTAL_STEPS } from "../src/simulation.ts";
-import { MAX_MEMORY_FILE_BYTES, memoryIndexAtStep, memoryPassageAtStep } from "../src/memoryPlayback.ts";
+import { MAX_MEMORY_FILE_BYTES, memoryIndexAtStep, memoryPassageAtStep, parseMemories } from "../src/memoryPlayback.ts";
 
 const baseUrl = process.env.POTTERY_MEMORIES_URL || "http://127.0.0.1:5173";
 assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseUrl).hostname), "Run memory verification only against a local server.");
@@ -16,10 +16,26 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
 const errors = [];
-const upload = (page, data) => page.getByLabel("Memories JSON file").setInputFiles({
-  name: "fabricated-test-memories.json", mimeType: "application/json",
-  buffer: Buffer.isBuffer(data) ? data : Buffer.from(JSON.stringify(data)),
-});
+const upload = async (page, data) => {
+  let entries;
+  try {
+    const parsed = parseMemories(Buffer.isBuffer(data) ? data.toString() : JSON.stringify(data));
+    entries = parsed.map(({text}, index) => ({ id: `fixture-${index}`, text, scores: {calm:0, anxiety:0, anger:0, stress:0, sadness:0}, status:'analyzed', source:{block:index,start:0,end:text.length} }));
+  } catch { entries = null; }
+  await page.route('**/api/memories/jobs**', async route => {
+    if (route.request().method() === 'POST') return route.fulfill({ status:202, json:{id:'test',token:'test'} });
+    if (route.request().method() === 'DELETE') return route.fulfill({ json:{id:'test',status:'cancelled',progress:{completed:0,total:0}} });
+    return route.fulfill({ json: entries ? {id:'test',status:'completed',progress:{completed:entries.length,total:entries.length},entries} : {id:'test',status:'failed',progress:{completed:0,total:0},error:'Invalid test input'} });
+  });
+  await page.locator('.memory-playback button[aria-label="Replace"], .memory-playback button[aria-label="Load memories"]').first().click();
+  const dialog = page.getByRole('dialog', {name:'Analyze memories'});
+  await dialog.getByLabel('Paste text').fill('Fabricated test fixture');
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button', {name:'Analyze memories'}).click();
+  if (entries) { await dialog.getByRole('button', {name:'Use these memories'}).click(); }
+  else { await expect(dialog.getByRole('alert')).toBeVisible(); await dialog.getByRole('button', {name:'Close memory import'}).click(); }
+  await page.unroute('**/api/memories/jobs**');
+};
 const current = (page) => page.locator(".memory-playback").getAttribute("data-current-index").then(Number);
 const nodes = (page) => page.locator(".viewport canvas").evaluate((canvas) => Number(canvas.dataset.nodes));
 async function assertBounded(page) {
@@ -43,7 +59,7 @@ async function assertMemoryHierarchy(page) {
   const type = await page.locator(".memory-panel").evaluate((panel) => {
     const style = (selector) => getComputedStyle(panel.querySelector(selector));
     const empty = style(".memory-empty > p");
-    return { empty: parseFloat(empty.fontSize), title: !!panel.querySelector('.emotion-plan-copy'), emotion: !!panel.querySelector('.emotion-stage') };
+    return { empty: parseFloat(empty.fontSize), title: !!panel.querySelector('.emotion-plan-copy'), emotion: !!panel.querySelector('.memory-emotion-tags') };
   });
   assert.equal(type.title, false, "the collection title is absent from the studio panel");
   assert.equal(type.emotion, false, "there is no emotion label without a displayed memory");
@@ -53,13 +69,15 @@ async function assertMemoryHierarchy(page) {
 async function assertPanelLayout(page) {
   const boxes = await page.locator(".memory-panel").evaluate((panel) => {
     const rect = (node) => { const b = node.getBoundingClientRect(); return { top: b.top, bottom: b.bottom }; };
-    const active = panel.querySelector('.memory-active');
+    const carousel = panel.querySelector('.memory-carousel');
+    const emotion = panel.querySelector('.memory-playback > .memory-emotion-tags');
     return { panel: rect(panel), body: rect(panel.querySelector(".memory-panel-scroll")), actions: rect(panel.querySelector(".print-actions")),
-      text: active ? rect(active.querySelector('p')) : null, emotion: active ? rect(active.querySelector('.emotion-stage')) : null,
+      carousel: carousel ? rect(carousel) : null, emotion: emotion ? rect(emotion) : null,
       title: !!panel.querySelector('.emotion-plan-copy'), horizontalOverflow: document.documentElement.scrollWidth > innerWidth + 1 };
   });
   assert.equal(boxes.title, false, "the collection title is absent from the studio panel");
-  if (boxes.text) assert.ok(boxes.emotion.top >= boxes.text.bottom - 1, "the current emotion appears after the original memory text");
+  if (boxes.carousel) assert.ok(boxes.emotion.top >= boxes.carousel.bottom - 1 && boxes.emotion.bottom <= boxes.actions.top,
+    "the emotion stays between the reading region and print actions");
   assert.ok(boxes.actions.top >= boxes.body.bottom - 1, "actions cannot overlap the scrolling panel");
   assert.ok(boxes.actions.bottom <= boxes.panel.bottom + 1, "actions stay within the panel");
   assert.equal(boxes.horizontalOverflow, false);
@@ -120,11 +138,11 @@ try {
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole('combobox', { name: 'Print physics model' })).toHaveValue('strand');
   assert.equal(await page.getByRole("dialog").count(), 0);
-  assert.equal(await page.getByText("The default collection contains 1,910 public memories. Your imported JSON stays in your browser; it is not uploaded or saved with the work.", { exact: true }).count(), 0);
+  assert.equal(await page.getByText("The default collection contains 1,910 public memories. If you explicitly analyze your own content, it is sent to this website’s analysis service and configured model gateway. It is not saved with the pottery.", { exact: true }).count(), 0);
   await expect(page.locator('.memory-counter')).toHaveText('01/4');
   await expect(active(page).locator('p')).toHaveText(MEMORY_FIXTURE[0]);
   await page.getByRole("button", { name: "About memories", exact: true }).click();
-  await expect(page.getByText("The default collection contains 1,910 public memories. Your imported JSON stays in your browser; it is not uploaded or saved with the work.", { exact: true })).toBeVisible();
+  await expect(page.getByText("The default collection contains 1,910 public memories. If you explicitly analyze your own content, it is sent to this website’s analysis service and configured model gateway. It is not saved with the pottery.", { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Clear memories', exact: true }).click();
   await expect(page.getByRole("button", { name: "Load memories", exact: true })).toBeVisible();
   assert.equal(await page.locator(".memory-active").count(), 0, "no invented text in the empty state");
@@ -158,47 +176,55 @@ try {
   await expect(page.getByRole("button", { name: "Resume print", exact: false })).toBeVisible();
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  // Exercise the explicit selection gesture separately from setInputFiles.
-  const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "Replace", exact: true }).click();
-  await (await chooser).setFiles({ name: "fabricated-test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([
+  await upload(page, [
     { activity: "Test memory 1", name: "Test private name", date: "2099-01-01" },
     { content: "Test memory 2", date: "2000-01-01" },
     "Test memory 3 <b>literal text</b>",
-  ])) });
+  ]);
   await expect(page.locator(".memory-counter")).toHaveText("01/3");
   assert.equal(await page.getByText("Test private name", { exact: true }).count(), 0);
   assert.equal(await page.locator(".memory-active b").count(), 0, "text never becomes HTML");
   await expect(page.locator(".memory-active").first()).toContainText("Test memory 1");
 
-  // A long original keeps the emotion tag directly after its last line inside the reader.
+  // Long text scrolls inside the carousel; the emotion remains outside and visible.
   const longPlacementOriginal = 'Long original. '.repeat(120) + 'END OF ORIGINAL';
   await upload(page, [longPlacementOriginal]);
   const reading = active(page);
-  const placement = await reading.evaluate((slide) => {
-    const text = slide.querySelector('p').getBoundingClientRect();
-    const label = slide.querySelector('.emotion-stage').getBoundingClientRect();
-    const box = slide.getBoundingClientRect();
-    return { textBottom: text.bottom, labelTop: label.top, viewportBottom: box.bottom, scrollHeight: slide.scrollHeight, clientHeight: slide.clientHeight };
-  });
-  assert.ok(placement.scrollHeight > placement.clientHeight);
-  assert.ok(placement.labelTop >= placement.textBottom && placement.labelTop > placement.viewportBottom,
-    'long originals are not followed by a detached label outside the scrollable passage');
-  assert.equal(await reading.evaluate((slide) => { slide.scrollTop = slide.scrollHeight; return slide.querySelector('.emotion-stage').getBoundingClientRect().bottom <= slide.getBoundingClientRect().bottom + 1; }), true);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await assertPanelLayout(page);
+  const emotionLabel = page.locator('.memory-playback > .memory-emotion-tags');
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await assertPanelLayout(page);
+    await expect(emotionLabel).toBeVisible();
+    const placement = await page.locator('.memory-playback').evaluate((panel) => {
+      const slide = panel.querySelector('.memory-active'), carousel = panel.querySelector('.memory-carousel');
+      const tag = panel.querySelector(':scope > .memory-emotion-tags');
+      const canvas = carousel.getBoundingClientRect(), label = tag.getBoundingClientRect();
+      const start = { y: label.y, opacity: getComputedStyle(tag).opacity };
+      slide.scrollTop = slide.scrollHeight;
+      const end = tag.getBoundingClientRect();
+      return { overflow: slide.scrollHeight > slide.clientHeight, nested: !!slide.querySelector('.memory-emotion-tags'),
+        below: label.top >= canvas.bottom - 1, within: label.bottom <= panel.getBoundingClientRect().bottom,
+        delta: end.y - start.y, opacity: start.opacity, value: tag.textContent };
+    });
+    assert.equal(placement.overflow, true);
+    assert.equal(placement.nested, false);
+    assert.equal(placement.below && placement.within, true, 'the tag stays visible below the reading region');
+    assert.ok(Math.abs(placement.delta) < 1 && placement.opacity === '1' && placement.value.trim(),
+      'scrolling a long memory cannot move or fade its separate emotion label');
+    await expect(emotionLabel).toBeVisible();
+  }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await upload(page, Array.from({ length: 2000 }, (_, index) => ({ activity: `Test memory ${index + 1}`, name: `Test private name ${index + 1}` })));
   await expect(page.locator(".memory-counter")).toHaveText("01/2000");
   await expect(page.getByText("Selected passages", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "About memories", exact: true }).click();
-  await expect(page.locator(".memory-information")).toContainText("Preset collective arc; file-order passages sampled as printing progresses.");
+  await expect(page.locator(".memory-information")).toContainText("The print follows the preset collective arc.");
   await expect(page.locator(".memory-information")).toContainText("Use the arrows to read every memory.");
   await page.keyboard.press("Escape");
   await assertBounded(page);
   for (const invalid of [Buffer.from("{bad JSON"), ["Test replacement", null], Array(2001).fill("Test excess memory"), Buffer.alloc(MAX_MEMORY_FILE_BYTES + 1, 32)]) {
     await upload(page, invalid);
-    await expect(page.getByRole("alert")).toContainText("Existing memories are unchanged.");
+    await expect(page.locator('.memory-active')).toBeVisible();
     await expect(page.locator(".memory-counter")).toHaveText("01/2000");
   }
   // Successful replacement also clears the error without persisting the filename.
@@ -215,6 +241,11 @@ try {
   const paused = await current(page);
   const pausedPassage = await displayed(page);
   assert.equal(paused, memoryIndexAtStep(await nodes(page), 2000, TOTAL_STEPS));
+  const pausedEmotion = await page.locator('.memory-playback > .memory-emotion-tags').textContent();
+  await page.getByRole('button', { name: 'Read next memory', exact: true }).click();
+  await expect(page.locator('.memory-playback > .memory-emotion-tags')).toHaveText(pausedEmotion);
+  await expect(page.getByRole('button', { name: 'Auto-follow off', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Auto-follow off', exact: true }).click();
   await expect(page.locator('.viewport .clay-scene')).toHaveAttribute('data-engine', '3');
   await page.waitForTimeout(500);
   assert.equal(await current(page), paused, "pause freezes the current memory");
@@ -226,6 +257,7 @@ try {
 
   await page.getByRole("button", { name: "Read next memory", exact: true }).click();
   await expect(page.getByRole("button", { name: "Auto-follow off", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await settled(page);
   await page.getByRole("button", { name: "Auto-follow off", exact: true }).click();
   await expect(page.locator('.memory-active[aria-current="step"]')).toHaveAttribute("data-memory-index", String(memoryPassageAtStep(await nodes(page), 2000, TOTAL_STEPS)));
   const automatic = await page.locator('.memory-carousel').evaluate((carousel) => {
@@ -234,15 +266,19 @@ try {
     entering.pause(); leaving.pause();
     entering.currentTime = leaving.currentTime = 140;
     const duringExit = Number(getComputedStyle(carousel.querySelector('.memory-active')).opacity);
+    entering.currentTime = leaving.currentTime = 280;
+    const duringPause = { inOpacity: Number(getComputedStyle(carousel.querySelector('.memory-active')).opacity),
+      outOpacity: Number(getComputedStyle(carousel.querySelector('.memory-outgoing')).opacity) };
     entering.currentTime = leaving.currentTime = 400;
     const matrix = new DOMMatrixReadOnly(getComputedStyle(carousel.querySelector('.memory-active')).transform);
     const exitOpacity = Number(getComputedStyle(carousel.querySelector('.memory-outgoing')).opacity);
     entering.play(); leaving.play();
-    return { duringExit, exitOpacity, x: matrix.m41, y: matrix.m42 };
+    return { duringExit, duringPause, exitOpacity, x: matrix.m41, y: matrix.m42 };
   });
   assert.equal(automatic.duringExit, 0, 'new original is invisible while the old one fades');
+  assert.deepEqual(automatic.duringPause, { inOpacity: 0, outOpacity: 0 }, 'short pause keeps passages from overlapping');
   assert.equal(automatic.exitOpacity, 0);
-  assert.equal(automatic.x, 0); assert.ok(automatic.y > 0 && automatic.y < 8, 'automatic following floats upward rather than sliding sideways');
+  assert.equal(automatic.x, 0); assert.ok(automatic.y > 0 && automatic.y < 6, 'automatic following floats upward rather than sliding sideways');
   await settled(page);
   const beforeFollowScroll = await page.evaluate(() => scrollY);
   await page.getByRole("button", { name: "Resume print", exact: false }).click();
@@ -269,7 +305,7 @@ try {
   const record = await readFile(await (await downloadEvent).path(), "utf8");
   assert.equal(record.includes("Test memory"), false, "work archives contain no imported text");
   assert.equal(record.includes("Test private name"), false);
-  assert.deepEqual(uploads, [], "file import makes no upload requests");
+  assert.ok(uploads.every(method => ['POST', 'DELETE'].includes(method)), "only explicitly authorized analysis uses writes");
 
   await page.getByRole('button', { name: 'About memories', exact: true }).click();
   await page.getByRole('button', { name: 'Clear memories', exact: true }).click();
@@ -332,12 +368,18 @@ try {
   await design.setViewportSize({ width: 1440, height: 1000 });
   const readingType = await design.locator(".memory-panel").evaluate((panel) => {
     const size = (selector) => parseFloat(getComputedStyle(panel.querySelector(selector)).fontSize);
-    return { memory: size('.memory-active[aria-current="step"] p'), emotion: size('.memory-active .emotion-stage h3') };
+    return { memory: size('.memory-active[aria-current="step"] p'), emotion: size('.memory-playback > .memory-emotion-tags .memory-emotion-tag') };
   });
   assert.ok(readingType.memory >= 36 && readingType.memory >= readingType.emotion * 2,
     "the playing memory is larger than the emotion label");
+  const tag = design.locator('.memory-playback > .memory-emotion-tags');
+  const tagBefore = await tag.boundingBox();
   await design.getByRole("button", { name: "Read next memory", exact: true }).click();
   await expect(design.locator('.memory-outgoing')).toHaveCount(1);
+  await expect(tag).toBeVisible();
+  assert.equal(await design.locator('.memory-carousel .memory-emotion-tags').count(), 0, 'slides never duplicate or animate the current emotion');
+  assert.equal(await tag.evaluate((node) => node.getAnimations({ subtree: true }).length), 0);
+  assert.ok(Math.abs((await tag.boundingBox()).y - tagBefore.y) < 1, 'the tag does not move during a passage transition');
   await assertBounded(design);
   const transition = await design.locator('.memory-carousel').evaluate((carousel) => {
     const animations = carousel.getAnimations({ subtree: true });
@@ -345,7 +387,7 @@ try {
     const current = getComputedStyle(carousel.querySelector('.memory-active'));
     return { count: animations.length, opacity: Number(current.opacity), transform: current.transform };
   });
-  assert.equal(transition.count, 2);
+  assert.ok(transition.count >= 2 && transition.count <= 3);
   assert.ok(transition.opacity > 0 && transition.opacity < 1);
   assert.notEqual(transition.transform, 'none');
   const manualAxes = await design.locator('.memory-active').evaluate((node) => {

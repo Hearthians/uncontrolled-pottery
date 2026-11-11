@@ -392,7 +392,7 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       controls.maxZoom = 2.4;
       controls.minPolarAngle = 0.05;
       controls.maxPolarAngle = Math.PI / 2 - 0.03;
-      controls.autoRotateSpeed = 0.55;
+      controls.autoRotateSpeed = 0.3;
       controls.enabled = !initial.miniature;
 
       scene.add(new THREE.HemisphereLight("#ffffff", "#b9b9ab", 2.15));
@@ -709,12 +709,15 @@ export const ClayScene = forwardRef<SceneHandle, Props>(
       };
       loadRef.current(initial.initial);
       let frame = 0;
-      const render = () => {
+      let previousFrame = performance.now();
+      const render = (now: number) => {
         frame = requestAnimationFrame(render);
-        controls.update();
+        const delta = Math.min((now - previousFrame) / 1000, 0.1);
+        previousFrame = now;
+        controls.update(delta);
         renderer.render(scene, camera);
       };
-      if (!initial.miniature) render();
+      if (!initial.miniature) frame = requestAnimationFrame(render);
       return () => {
         cancelAnimationFrame(frame);
         cancelAnimationFrame(snapshotFrame);

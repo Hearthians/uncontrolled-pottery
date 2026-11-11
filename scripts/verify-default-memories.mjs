@@ -50,9 +50,25 @@ try {
       assert.equal(oldRequests, 0);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.locator('.memory-counter')).toHaveText('01/1910');
-      await page.getByLabel('Memories JSON file').setInputFiles({ name: 'fictional.json', mimeType: 'application/json',
-        buffer: Buffer.from(JSON.stringify(['Private manual fixture — must remain browser-only.'])) });
-      await expect(page.locator('.memory-active p')).toHaveText('Private manual fixture — must remain browser-only.');
+      let requests = 0;
+      await page.route('**/api/memories/jobs**', async route => {
+        if (route.request().method() === 'POST') {
+          requests++;
+          return route.fulfill({ status: 202, json: { id: 'fixture', token: 'fixture-token' } });
+        }
+        if (route.request().method() === 'DELETE') return route.fulfill({ json: { id: 'fixture', status: 'cancelled', progress: { completed: 0, total: 0 } } });
+        const text = 'Private manual fixture — session only.';
+        return route.fulfill({ json: { id: 'fixture', status: 'completed', progress: { completed: 1, total: 1 }, entries: [{ id: 'fixture-0', text, scores: { calm: 0, anxiety: 1, anger: 0, stress: 0, sadness: 0 }, status: 'analyzed', source: { block: 0, start: 0, end: text.length } }] } });
+      });
+      await page.getByRole('button', { name: 'Replace', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: 'Analyze memories' });
+      await dialog.getByLabel('Paste text').fill('Private manual fixture — session only.');
+      assert.equal(requests, 0);
+      await dialog.getByRole('checkbox').check();
+      await dialog.getByRole('button', { name: 'Analyze memories' }).click();
+      await dialog.getByRole('button', { name: 'Use these memories' }).click();
+      await expect(page.locator('.memory-active p')).toHaveText('Private manual fixture — session only.');
+      assert.equal(requests, 1);
       assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('Private manual fixture')), false);
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.locator('.memory-counter')).toHaveText('01/1910');

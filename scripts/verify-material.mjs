@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import { mockDefaultMemories } from "./memory-fixture.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -59,7 +59,8 @@ try {
   }));
   const planned = plannedNozzle(finalNodes);
   for (const axis of ["x", "y", "z"]) assert.ok(Math.abs(pose[axis] - planned[axis]) < 0.00002);
-  assert.equal(await page.locator(".memory-active .emotion-stage h3").textContent(), emotionAtStep(finalNodes - 1).label);
+  await expect(page.locator('.memory-emotion-tag')).toHaveCount(5);
+  assert.ok(emotionAtStep(finalNodes - 1).position > 0);
   log("V3 fixed nozzle path, original-plan emotion progress, and repeated pause/gallery/resume reconstruction verified.");
 
   const timings = await page.evaluate(() => {
@@ -86,7 +87,7 @@ try {
   assert.equal(recorded.emotionPlan.mappingVersion, "emotion-behavior-2");
   const stoppedEmotion = emotionAtStep(recorded.steps - 1, recorded.emotionPlan);
   assert.ok(stoppedEmotion.position < 0.5, "early stop cannot traverse the remaining emotion arc");
-  assert.equal(await page.locator(".memory-active .emotion-stage h3").textContent(), stoppedEmotion.label);
+  await expect(page.locator('.memory-emotion-tag')).toHaveCount(5);
   log(`V3 early stop saved ${recorded.steps} nodes and ${recorded.simulation.pulses.length} supply pulses; material properties stay fixed.`);
   const downloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export record", exact: true }).click();

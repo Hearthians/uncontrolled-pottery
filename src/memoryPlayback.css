@@ -16,11 +16,19 @@
 }
 .memory-panel-scroll { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; padding: 2px 3px 12px 0; }
 .memory-panel > .print-actions { flex: 0 0 auto; margin-top: 0; background: var(--memory-paper); border-top: 1px solid var(--line); padding-top: 16px; }
-.memory-panel .emotion-stage { display: flex; align-items: center; padding: 16px 0 0; }
-.memory-panel .emotion-stage h3 { min-height: 0; margin: 0; padding: 5px 9px; font-size: 12px; line-height: 1.45; font-weight: 500; color: var(--memory-ink); background: #edf0e8; border-radius: 3px; }
 .has-memories .memory-panel-scroll { display: flex; }
 .has-memories .memory-playback { display: flex; flex: 1; min-height: 0; flex-direction: column; }
-.has-memories .memory-heading, .memory-reader-controls, .memory-selection-note { flex: 0 0 auto; }
+.has-memories .memory-heading, .memory-reader-controls, .memory-selection-note, .memory-print-contribution { flex: 0 0 auto; }
+.memory-print-contribution { margin: 10px 0 0; padding: 10px; border: 1px solid #d9e2d6; border-radius: 4px; background: #f5f8f2; color: var(--memory-ink); font-size: 10px; line-height: 1.4; }
+.memory-print-heading { display: flex; justify-content: space-between; gap: 6px; }
+.memory-print-heading span, .memory-print-contribution p { color: var(--memory-muted); }
+.memory-print-contribution p { margin: 5px 0; }
+.memory-print-scores { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.memory-print-scores b, .memory-print-controls b { font-variant-numeric: tabular-nums; }
+.memory-print-arrow { color: var(--memory-muted); line-height: 1.2; }
+.memory-print-controls { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.memory-print-controls span { color: var(--memory-ink); }
+@media (forced-colors: active) { .memory-print-contribution { border: 1px solid CanvasText; background: Canvas; color: CanvasText; } }
 .has-memories .memory-carousel { flex: 1; min-height: 130px; }
 .memory-playback { position: relative; min-width: 0; color: var(--memory-ink); }
 .memory-heading { display: flex; align-items: center; justify-content: space-between; position: relative; padding-top: 4px; }
