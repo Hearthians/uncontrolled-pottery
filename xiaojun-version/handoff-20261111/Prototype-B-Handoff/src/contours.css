@@ -1,0 +1,27 @@
+.contour-app .control-panel { overflow-y: auto; }
+.contour-app fieldset { border: 0; padding: 18px 0; margin: 0; display: grid; gap: 14px; }
+.contour-app fieldset label { display: grid; gap: 7px; font-size: 12px; }
+.contour-app input[type="number"] { min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 3px; background: white; }
+.contour-app fieldset p { font-size: 11px; color: #70796a; }
+.contour-app select { padding: 6px; border: 1px solid var(--line); background: #f7f8f5; color: inherit; border-radius: 3px; }
+.path-stats { display: grid; grid-template-columns: 1fr; gap: 5px; font-size: 11px; margin: 8px 0 20px; }
+.path-stats dt { color: #70796a; margin-top: 7px; }
+.path-stats dd { margin: 0; font-family: var(--mono); }
+.contour-playback { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; padding: 16px 24px; border-top: 1px solid var(--line); font-size: 12px; }
+.contour-playback .primary-button { width: 110px; flex-shrink: 0; }
+.contour-progress { flex: 1; display: grid; gap: 6px; min-width: 80px; }
+.contour-progress progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.contour-progress span { font-family: var(--mono); font-size: 10px; }
+.contour-app .canvas-tools button { font-size: 11px; padding: 6px; }
+.contour-app button[aria-pressed="true"] { color: var(--accent); }
+.contour-app [role="alert"] { color: #a33824; font-size: 12px; }
+@media (max-width: 760px) {
+  .contour-playback { flex-wrap: wrap; gap: 12px; padding: 14px; }
+  .contour-app .topbar > span { font-size: 10px; }
+}
+
+.shape-warning, .shape-note { font-size: 11px; line-height: 1.5; margin: 8px 0; color: #78634f; }
+.contour-app fieldset select { width: 100%; min-width: 0; }
+
+.contour-app .viewport-bottom { flex-wrap: wrap; }
+.contour-app .machine-info { grid-column: 1 / -1; }

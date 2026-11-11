@@ -6,5 +6,9 @@ dist-public.previous/
 test-results/
 .vite/
 artifacts/
+.tmuxhub/
+.env
+.env.*
+!.env.example
 embeddings_lab_updated.zip
 *.tsbuildinfo

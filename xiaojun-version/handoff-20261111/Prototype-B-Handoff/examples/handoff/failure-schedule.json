@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "geometryId": "gof-geometry-1.1.1-1fdf629ecac53bee575c99527a36d02013e581478ec8551ad71ed6cd35226a66",
+  "geometrySchemaVersion": "1.1.0",
+  "generatorVersion": "1.1.1",
+  "mappingSeed": 42,
+  "entries": [
+    {"layerId": 0, "failureType": "stable", "intensity": 0},
+    {"layerId": 1, "failureType": "gaps", "intensity": 0.25},
+    {"layerId": 1, "failureType": "layer-offset", "intensity": 0.5},
+    {"layerId": 1, "failureType": "material-accumulation", "intensity": 0.5},
+    {"layerId": 2, "failureType": "sagging", "intensity": 0.75}
+  ]
+}
