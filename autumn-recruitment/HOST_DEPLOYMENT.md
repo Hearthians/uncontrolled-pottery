@@ -9,7 +9,7 @@
 - Windows 原生离线测试 33 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
 - Windows 原生 `doctor --live` 成功，网关为 `https://api.gfyh.fun/v1`，模型 `gpt-6.1-sol` 可用。
 - 现有 LLM 凭据通过 `\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\` 只读引用，配置路径保存在宿主部署目录的 `data\host-env.ps1`。
-- AdsPower 技能已按用户指定的 `npx skills add ... --skill adspower-browser` 安装在 WSL 用户的 `~/.agents/skills/adspower-browser`，其 CLI 已可运行；宿主机既有 AdsPower 客户端已启动。
+- AdsPower 技能已按用户指定的 `npx skills add ... --skill adspower-browser` 安装在 WSL 用户的 `~/.agents/skills/adspower-browser` 及 Windows 的 `%USERPROFILE%\.agents\skills\adspower-browser`，后续会话可发现该技能；WSL 侧 CLI 已验证可运行，宿主机既有 AdsPower 客户端已启动。
 - Clash Verge 运行中，混合代理地址 `http://127.0.0.1:7897`；通过该代理的 X 访问测试成功。X 采集器使用明确的进程级代理参数。
 
 ## 真实采集结果与当前阻塞
