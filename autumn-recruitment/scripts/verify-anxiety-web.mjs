@@ -24,6 +24,7 @@ const scored = posts => posts.filter(post => post.anxiety?.status === 'scored');
 const median = values => values.length ? values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2 : null;
 const key = post => `${post.platform}:${post.post_id}`;
 const chronological = (a, b) => b.published_at.localeCompare(a.published_at) || a.post_id.localeCompare(b.post_id);
+const spreadsheetSafe = value => /^[\s]*[=+@-]/u.test(String(value ?? '')) ? "'" + value : String(value ?? '');
 function ordered(posts, direction) {
   return [...posts].sort((a, b) => {
     const first = a.anxiety.status === 'scored', second = b.anxiety.status === 'scored';
@@ -93,10 +94,39 @@ try {
   await page.locator('#dashboard:not([hidden])').waitFor();
   const livePosts = live.posts;
   report.browserStatuses = counts(livePosts);
+  async function checkEnglishUI(label) {
+    const issues = await page.evaluate(() => {
+      const han = /\p{Script=Han}/u;
+      const sourceText = element => element.closest('.post-body, .anxiety-evidence blockquote') || (element.closest('.post-evidence') && !element.matches('.post-evidence > span'));
+      const results = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode, element = node.parentElement;
+        if (!element || element.closest('script, style') || sourceText(element)) continue;
+        if (han.test(node.textContent)) results.push({ kind: 'text', element: element.id || element.className?.baseVal || element.className || element.tagName, value: node.textContent.trim() });
+      }
+      for (const element of document.querySelectorAll('[aria-label], [title], [placeholder], [data-tooltip]')) {
+        if (sourceText(element) || element.closest('.post-evidence')) continue;
+        for (const name of ['aria-label', 'title', 'placeholder', 'data-tooltip']) {
+          const value = element.getAttribute(name);
+          if (value && han.test(value)) results.push({ kind: name, element: element.id || element.tagName, value });
+        }
+      }
+      return results;
+    });
+    check(`${label} UI uses English outside original text and quotations`, issues, []);
+  }
+  check('document language is English', await page.locator('html').getAttribute('lang'), 'en');
+  check('browser title is English', /\p{Script=Han}/u.test(await page.title()), false);
   check('homepage defaults to combined dataset', live.dataset, 'combined');
   check('dataset dropdown and category row are absent', await page.locator('#dataset-select, #datasets').count(), 0);
   check('unified navigation exposes eleven platforms and summary', await page.locator('#platforms button').count(), 12);
-  check('homepage default includes all 957 posts', await page.locator('#voice-count').innerText(), '957 条');
+  check('homepage default includes all 957 posts', await page.locator('#voice-count').innerText(), '957 posts');
+  const initialPlatformOrder = await page.locator('#platforms button').evaluateAll(elements => elements.map(element => element.dataset.platform));
+  check('all-platform summary remains first', initialPlatformOrder[0], 'all');
+  const platformTotals = initialPlatformOrder.slice(1).map(platform => livePosts.filter(post => post.platform === platform).length);
+  check('platform navigation follows descending total sample counts', platformTotals.every((amount, index) => index === 0 || platformTotals[index - 1] >= amount), true);
+  await checkEnglishUI('homepage');
   check('combined relevance defaults to all', await page.locator('#relevance-filter').inputValue(), 'all');
   check('combined candidate metric', (await page.locator('#metric-selected').innerText()).trim(), '957');
   check('histogram has ten fixed bins', await page.locator('#anxiety-histogram [data-anxiety-bin]').count(), 10);
@@ -126,17 +156,24 @@ try {
     const rows = parse(await fs.readFile(destination, 'utf8'), { bom: true, columns: true });
     check(`${label} CSV rows match complete UI filter`, rows.length, expectedPosts.length);
     const columns = Object.keys(rows[0] || {});
-    check(`${label} CSV anxiety headers present`, ['焦虑程度', '焦虑评分状态', '焦虑评分依据', '焦虑评分说明', '焦虑评分版本'].every(name => columns.includes(name)), true);
+    check(`${label} CSV keeps all 23 fields`, columns.length, 23);
+    check(`${label} CSV headers are English`, columns.every(name => /[A-Za-z]/u.test(name) && !/\p{Script=Han}/u.test(name)), true);
+    check(`${label} CSV anxiety headers present`, ['Anxiety score', 'Anxiety status', 'Anxiety evidence', 'Anxiety reason', 'Anxiety prompt version'].every(name => columns.includes(name)), true);
+    const translatedFields = ['Platform', 'Relevance', 'Topics', 'Sentiment', 'Emotions', 'Entry type', 'Language', 'Market region', 'Anxiety status', 'Anxiety reason'];
+    check(`${label} CSV metadata and explanations are English`, rows.every(row => translatedFields.every(field => !/\p{Script=Han}/u.test(row[field] || ''))), true);
+    check(`${label} CSV preserves original source text`, rows.map(row => row.Text).sort(), expectedPosts.map(post => spreadsheetSafe(post.text)).sort());
+    check(`${label} CSV preserves original anxiety quotations`, expectedPosts.every(post => rows.some(row => row.Text === spreadsheetSafe(post.text) && row['Source URL'] === post.url && post.anxiety.evidence.every(quote => row['Anxiety evidence'].includes(quote)))), true);
     const zeroPosts = expectedPosts.filter(post => post.anxiety.status === 'scored' && post.anxiety.score === 0);
-    if (zeroPosts.length) check(`${label} CSV keeps real zero`, rows.some(row => row['焦虑程度'] === '0'), true);
+    if (zeroPosts.length) check(`${label} CSV keeps real zero`, rows.some(row => row['Anxiety score'] === '0'), true);
     const unknownPosts = expectedPosts.filter(post => post.anxiety.status !== 'scored');
-    if (unknownPosts.length) check(`${label} CSV missing value remains empty`, rows.filter(row => row['焦虑程度'] === '').length, unknownPosts.length);
+    if (unknownPosts.length) check(`${label} CSV missing value remains empty`, rows.filter(row => row['Anxiety score'] === '').length, unknownPosts.length);
     report.downloads.push({ label, filename: file.suggestedFilename(), rows: rows.length, destination });
   }
 
   await download('combined-all', [...livePosts].sort(chronological));
   const firstPage = await bodyTexts();
   check('reading list first page has six cards', firstPage.length, 6);
+  check('reading list preserves original source text', firstPage, [...livePosts].sort(chronological).slice(0, 6).map(post => post.text));
   await page.locator('#next').click();
   check('pagination advances', (await page.locator('#page-number').innerText()).startsWith('2 /'), true);
   check('pagination changes visible original text', JSON.stringify(await bodyTexts()) !== JSON.stringify(firstPage), true);
@@ -198,6 +235,7 @@ try {
       check('score explanation can be expanded', await details.getAttribute('open') !== null, true);
       const quotes = await details.locator('blockquote').allTextContents();
       check('card evidence matches API evidence', quotes, expectedFirst.anxiety.evidence);
+      await checkEnglishUI('expanded score explanation');
     }
   } else report.skipped.push('No scored records yet: histogram selection, score order and evidence expansion require completed model results.');
 
@@ -245,7 +283,7 @@ try {
   await page.locator('#platforms [data-platform="xiaohongshu"]').click();
   await waitForSelection('combined', 'xiaohongshu');
   check('XHS combined sample includes 207 posts', (await page.locator('#metric-selected').innerText()).trim(), '207');
-  check('XHS sample switch label', (await page.locator('#xhs-sample-mode').innerText()).trim(), '按年样本');
+  check('XHS sample switch label', (await page.locator('#xhs-sample-mode').innerText()).trim(), 'Annual sample');
   check('XHS full sample leaves annual mode inactive', await page.locator('#xhs-sample-mode').getAttribute('aria-pressed'), 'false');
   await page.locator('#xhs-sample-mode').click();
   await waitForSelection('balanced', 'xiaohongshu');
@@ -256,6 +294,7 @@ try {
   await waitForSelection('combined', 'xiaohongshu');
   check('XHS switch restores all 207 posts', await uiCount(), 207);
   check('XHS full sample clears annual mode active state', await page.locator('#xhs-sample-mode').getAttribute('aria-pressed'), 'false');
+  check('XHS sample switching preserves platform ordering', await page.locator('#platforms button').evaluateAll(elements => elements.map(element => element.dataset.platform)), initialPlatformOrder);
   await clickSummary();
   check('summary restores all 957 posts after XHS sample switching', await uiCount(), 957);
 
@@ -265,6 +304,7 @@ try {
     check(`${platform} zero-sample platform uses original dataset`, await currentDataset(), dataset);
     check(`${platform} zero-sample platform keeps the real empty state`, await uiCount(), 0);
     check(`${platform} zero-sample platform hides XHS sample switch`, await page.locator('#xhs-sample-mode').isVisible(), false);
+    await checkEnglishUI(`${platform} empty state`);
     await clickSummary();
     check(`summary returns from ${platform} to combined`, await uiCount(), 957);
   }
@@ -280,6 +320,7 @@ try {
     await openDatasetLink(dataset);
     check(`${dataset} legacy link still loads original dataset`, await currentDataset(), dataset);
     check(`${dataset} legacy link keeps original candidate count`, (await page.locator('#metric-selected').innerText()).trim(), String(total));
+    await checkEnglishUI(`${dataset} legacy dataset`);
     await clickSummary();
     check(`summary restores combined from ${dataset} legacy link`, await uiCount(), 957);
   }
@@ -319,6 +360,7 @@ try {
   await page.locator('#anxiety').screenshot({ path: path.join(output, 'mobile-anxiety.png') });
   check('mobile has no document horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
   check('mobile anxiety controls visible', await page.locator('#anxiety-status').isVisible(), true);
+  await checkEnglishUI('mobile');
   check('browser JavaScript errors', report.pageErrors.length, 0);
   check('browser console errors', report.consoleErrors.length, 0);
   check('browser HTTP errors', report.browserHttpErrors.length, 0);

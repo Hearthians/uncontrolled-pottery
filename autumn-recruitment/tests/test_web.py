@@ -45,6 +45,8 @@ class DashboardTests(unittest.TestCase):
         web.mkdir()
         (web / "index.html").write_text("<!doctype html><title>秋招</title>", encoding="utf-8")
         (web / "app.js").write_text("console.log('dashboard')", encoding="utf-8")
+        self.catalog = {"样本说明": "About the sample"}
+        (web / "content.en.json").write_text(json.dumps(self.catalog, ensure_ascii=False), encoding="utf-8")
         (self.root / "config.json").write_text('{"key":"hidden-marker"}', encoding="utf-8")
         self.server = create_server(self.config, port=0)
         self.thread = Thread(target=self.server.serve_forever, daemon=True)
@@ -268,6 +270,24 @@ class DashboardTests(unittest.TestCase):
     def test_static_allowlist_and_head_health(self):
         _, text = self.get("/")
         self.assertIn("<title>秋招", text)
+        response, text = self.get("/content.en.json")
+        self.assertEqual(response.status, 200)
+        self.assertEqual(json.loads(text), self.catalog)
+        self.assertEqual(response.headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(int(response.headers["Content-Length"]), len(text.encode("utf-8")))
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(response.headers["Referrer-Policy"], "no-referrer")
+        policy = response.headers["Content-Security-Policy"]
+        for directive in ("default-src 'self'", "script-src 'self'", "connect-src 'self'",
+                          "base-uri 'none'", "frame-ancestors 'none'"):
+            self.assertIn(directive, policy)
+        with urlopen(Request(self.origin + "/content.en.json", method="HEAD"), timeout=2) as head:
+            self.assertEqual(head.status, 200)
+            self.assertEqual(head.headers["Content-Type"], response.headers["Content-Type"])
+            self.assertEqual(head.headers["Content-Length"], response.headers["Content-Length"])
+            self.assertEqual(head.headers["Cache-Control"], "no-store")
+            self.assertEqual(head.read(), b"")
         for path in ("/config.json", "/data/study.sqlite3", "/../config.json", "/%2e%2e/config.json", "/outputs/sample.jsonl", "/outputs/combined/anxiety-v1/scores.jsonl", "/web/../config.json"):
             with self.subTest(path=path), self.assertRaises(HTTPError) as failure:
                 self.get(path)

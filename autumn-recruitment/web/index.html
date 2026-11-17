@@ -1,115 +1,115 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>秋招观察 · 年度话题与情绪</title>
+  <title>Recruitment Observatory · Topics and Emotions by Year</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">跳到研究内容</a>
+  <a class="skip-link" href="#main">Skip to study</a>
   <aside class="sidebar">
-    <a class="brand" href="#overview" aria-label="秋招观察首页">
+    <a class="brand" href="#overview" aria-label="Recruitment Observatory home">
       <span class="brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 24V14m8 10V8m8 16V18"/><path d="m6 8 9-5 11 7"/></svg></span>
-      <span>秋招观察</span>
+      <span>Recruitment Observatory</span>
     </a>
-    <nav class="nav-links" aria-label="页面导航">
-      <a href="#overview" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>年度总览</a>
-      <a href="#anxiety"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18M5 14V9m5 5V5m5 9v-3m5 3V7"/></svg>焦虑程度</a>
-      <a href="#topics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h12M4 19h8"/><circle cx="20" cy="19" r="1"/></svg>话题与情绪</a>
-      <a href="#voices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H7l-4 3V11a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/><path d="M8 10h8m-8 4h5"/></svg>样本阅读</a>
-      <a href="#method"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5Z"/><path d="M9 10h6m-6 4h6m-6 4h4"/></svg>研究口径</a>
+    <nav class="nav-links" aria-label="Page navigation">
+      <a href="#overview" class="active" aria-label="Annual overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Annual overview</a>
+      <a href="#anxiety" aria-label="Anxiety"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18M5 14V9m5 5V5m5 9v-3m5 3V7"/></svg>Anxiety</a>
+      <a href="#topics" aria-label="Topics and emotions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h12M4 19h8"/><circle cx="20" cy="19" r="1"/></svg>Topics &amp; emotions</a>
+      <a href="#voices" aria-label="Read posts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H7l-4 3V11a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/><path d="M8 10h8m-8 4h5"/></svg>Read posts</a>
+      <a href="#method" aria-label="Methods"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5Z"/><path d="M9 10h6m-6 4h6m-6 4h4"/></svg>Methods</a>
     </nav>
-    <div class="sidebar-note"><span class="live-dot"></span>研究数据</div>
+    <div class="sidebar-note"><span class="live-dot"></span>Study data</div>
     <div class="sidebar-footer">2022 — 2026</div>
   </aside>
 
   <main id="main">
-    <div class="topbar"><strong id="study-scope">秋季校园招聘</strong><span id="updated-at" class="updated-at">正在读取本地数据…</span></div>
+    <div class="topbar"><strong id="study-scope">Fall campus recruitment</strong><span id="updated-at" class="updated-at">Loading study data…</span></div>
     <header class="page-heading" id="overview">
-      <div><h1 id="page-title">秋招里的声音<span>2022—2026</span></h1></div>
-      <div class="header-actions"><button id="refresh" class="button button-light"><span aria-hidden="true">↻</span> 刷新数据</button><button id="download" class="button button-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg>导出筛选样本</button></div>
+      <div><h1 id="page-title">Voices from recruitment<span>2022–2026</span></h1></div>
+      <div class="header-actions"><button id="refresh" class="button button-light"><span aria-hidden="true">↻</span> Refresh</button><button id="download" class="button button-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg>Export filtered posts</button></div>
     </header>
 
-    <section class="filter-panel" aria-label="图表筛选">
+    <section class="filter-panel" aria-label="Chart filters">
       <div class="filter-bar">
-        <div id="platforms" class="segmented" role="group" aria-label="平台"></div>
-        <button type="button" id="xhs-sample-mode" class="sample-mode-button" aria-label="切换小红书样本范围" hidden>按年样本</button>
-        <span class="window-label" id="window-label">08.01 — 11.17 <span>· 北京时间</span></span>
+        <div id="platforms" class="segmented" role="group" aria-label="Platforms"></div>
+        <button type="button" id="xhs-sample-mode" class="sample-mode-button" aria-label="Switch Xiaohongshu sample scope" hidden>Annual sample</button>
+        <span class="window-label" id="window-label">Aug 1 – Nov 17 <span>· Beijing time</span></span>
       </div>
-      <div class="year-filter"><div id="years" role="group" aria-label="年份"><button data-year="all" class="active" aria-pressed="true">全部年份</button></div><button id="reset" class="text-button">重置筛选</button></div>
+      <div class="year-filter"><div id="years" role="group" aria-label="Years"><button data-year="all" class="active" aria-pressed="true">All years</button></div><button id="reset" class="text-button">Reset filters</button></div>
     </section>
 
     <div id="error" class="error-state" role="alert" hidden></div>
-    <div id="loading" class="loading-state"><span class="spinner"></span>正在整理年度讨论…</div>
+    <div id="loading" class="loading-state"><span class="spinner"></span>Loading discussions by year…</div>
     <div id="dashboard" hidden>
-      <details class="context-note"><summary id="context-title">样本说明</summary><div class="context-note-body"><p id="context-text"></p><a href="#method">研究口径 ↗</a></div></details>
+      <details class="context-note"><summary id="context-title">About the sample</summary><div class="context-note-body"><p id="context-text"></p><a href="#method">Methods ↗</a></div></details>
 
-      <section class="metrics" aria-label="当前筛选统计" aria-live="polite">
-        <article class="metric"><div class="metric-label">选中候选</div><div class="metric-value" id="metric-selected">—</div><div class="metric-detail" id="metric-labelled">—</div></article>
-        <article class="metric"><div class="metric-label">相关讨论</div><div class="metric-value" id="metric-relevant">—</div><div class="metric-detail">图表统计的基础样本</div></article>
-        <article class="metric"><div class="metric-label">负面表达占比</div><div class="metric-value" id="metric-negative">—</div><div class="metric-detail" id="metric-denominator">—</div></article>
-        <article class="metric"><div class="metric-label">有样本的年份</div><div class="metric-value" id="metric-years">—</div><div class="metric-detail" id="metric-year-detail">—</div></article>
+      <section class="metrics" aria-label="Statistics for current filters" aria-live="polite">
+        <article class="metric"><div class="metric-label">Selected candidates</div><div class="metric-value" id="metric-selected">—</div><div class="metric-detail" id="metric-labelled">—</div></article>
+        <article class="metric"><div class="metric-label">Relevant discussions</div><div class="metric-value" id="metric-relevant">—</div><div class="metric-detail">Base sample for topic and sentiment charts</div></article>
+        <article class="metric"><div class="metric-label">Negative sentiment</div><div class="metric-value" id="metric-negative">—</div><div class="metric-detail" id="metric-denominator">—</div></article>
+        <article class="metric"><div class="metric-label">Years with samples</div><div class="metric-value" id="metric-years">—</div><div class="metric-detail" id="metric-year-detail">—</div></article>
       </section>
 
       <section id="anxiety" class="anxiety-section">
-        <div class="section-heading"><div><span class="section-index">01</span><h2>文本表达的焦虑程度</h2><span id="anxiety-scope" class="scope-label"></span></div></div>
-        <p class="anxiety-intro">0 表示没有文本支持的焦虑表达，1 表示极强的焦虑表达；无法判断单独保留。评分描述整帖中作者自身的表达。</p>
+        <div class="section-heading"><div><span class="section-index">01</span><h2>Anxiety expressed in posts</h2><span id="anxiety-scope" class="scope-label"></span></div></div>
+        <p class="anxiety-intro">0 means no anxiety expressed in the text; 1 means extremely strong anxiety. Unassessable posts remain separate. Scores reflect the author's own expression across the full post.</p>
         <div class="anxiety-controls panel">
-          <label>最低分 <input id="anxiety-min" type="number" min="0" max="1" step="0.01" value="0" inputmode="decimal"></label>
-          <label>最高分 <input id="anxiety-max" type="number" min="0" max="1" step="0.01" value="1" inputmode="decimal"></label>
-          <label>评分状态 <select id="anxiety-status"><option value="all">全部状态</option><option value="scored">已评分</option><option value="unassessable">无法判断</option><option value="pending">待评分</option><option value="error">评分失败</option></select></label>
-          <label>阅读顺序 <select id="post-sort"><option value="time">发表时间 · 最新优先</option><option value="anxiety-desc">焦虑程度 · 从高到低</option><option value="anxiety-asc">焦虑程度 · 从低到高</option></select></label>
-          <button type="button" id="anxiety-clear" class="text-button">清除评分筛选</button>
+          <label>Minimum score <input id="anxiety-min" type="number" min="0" max="1" step="0.01" value="0" inputmode="decimal"></label>
+          <label>Maximum score <input id="anxiety-max" type="number" min="0" max="1" step="0.01" value="1" inputmode="decimal"></label>
+          <label>Score status <select id="anxiety-status"><option value="all">All statuses</option><option value="scored">Scored</option><option value="unassessable">Unassessable</option><option value="pending">Pending</option><option value="error">Scoring failed</option></select></label>
+          <label>Sort posts <select id="post-sort"><option value="time">Newest first</option><option value="anxiety-desc">Anxiety: high to low</option><option value="anxiety-asc">Anxiety: low to high</option></select></label>
+          <button type="button" id="anxiety-clear" class="text-button">Clear score filters</button>
         </div>
         <div class="anxiety-metrics" aria-live="polite">
-          <article class="metric"><div class="metric-label">处理完成</div><div class="metric-value" id="anxiety-progress">—</div><div class="metric-detail" id="anxiety-progress-detail">—</div></article>
-          <article class="metric"><div class="metric-label">平均焦虑程度</div><div class="metric-value" id="anxiety-mean">—</div><div class="metric-detail" id="anxiety-denominator">—</div></article>
-          <article class="metric"><div class="metric-label">焦虑程度中位数</div><div class="metric-value" id="anxiety-median">—</div><div class="metric-detail">真实零分参与计算</div></article>
-          <article class="metric"><div class="metric-label">无法判断</div><div class="metric-value" id="anxiety-unknown">—</div><div class="metric-detail" id="anxiety-pending">—</div></article>
+          <article class="metric"><div class="metric-label">Processing complete</div><div class="metric-value" id="anxiety-progress">—</div><div class="metric-detail" id="anxiety-progress-detail">—</div></article>
+          <article class="metric"><div class="metric-label">Mean anxiety</div><div class="metric-value" id="anxiety-mean">—</div><div class="metric-detail" id="anxiety-denominator">—</div></article>
+          <article class="metric"><div class="metric-label">Median anxiety</div><div class="metric-value" id="anxiety-median">—</div><div class="metric-detail">Zero scores are included</div></article>
+          <article class="metric"><div class="metric-label">Unassessable</div><div class="metric-value" id="anxiety-unknown">—</div><div class="metric-detail" id="anxiety-pending">—</div></article>
         </div>
         <div class="anxiety-charts">
-          <article class="panel"><div class="panel-heading"><div><h3>焦虑程度分布</h3><p>固定 0–1 尺度，点击分数区间筛选原文</p></div></div><div id="anxiety-histogram" class="anxiety-chart"></div><p class="chart-footnote">区间左闭右开，最后一区间包含 1；空值不进入分布。</p></article>
-          <article class="panel"><div class="panel-heading"><div><h3>各发表年份的平均焦虑</h3><p>点击年份筛选，n 为该年有效评分数</p></div></div><div id="anxiety-annual" class="anxiety-chart"></div><p class="chart-footnote">各年使用同一尺度，无有效评分时保留缺口。</p></article>
+          <article class="panel"><div class="panel-heading"><div><h3>Anxiety distribution</h3><p>Fixed 0–1 scale. Select a score range to read the posts.</p></div></div><div id="anxiety-histogram" class="anxiety-chart"></div><p class="chart-footnote">Each range includes its lower bound; only the final range includes its upper bound, 1. Missing scores are excluded.</p></article>
+          <article class="panel"><div class="panel-heading"><div><h3>Mean anxiety by publication year</h3><p>Select a year to filter. n is the number of valid scores.</p></div></div><div id="anxiety-annual" class="anxiety-chart"></div><p class="chart-footnote">All years use the same scale. Years without valid scores remain gaps.</p></article>
         </div>
       </section>
 
-      <div class="section-heading"><div><span class="section-index">02</span><h2>年度情感概览</h2><span id="scope-label" class="scope-label">全部平台 · 全部年份</span></div><div class="unit-toggle segmented" id="units" role="group" aria-label="统计显示单位"><button data-unit="percent" class="active" aria-pressed="true">占比 %</button><button data-unit="count" aria-pressed="false">条数</button></div></div>
+      <div class="section-heading"><div><span class="section-index">02</span><h2>Annual sentiment</h2><span id="scope-label" class="scope-label">All platforms · All years</span></div><div class="unit-toggle segmented" id="units" role="group" aria-label="Chart units"><button data-unit="percent" class="active" aria-pressed="true">Share %</button><button data-unit="count" aria-pressed="false">Count</button></div></div>
       <section class="overview-grid">
         <article class="panel sentiment-panel">
-          <div class="panel-heading"><div><h3>情感极性的年度分布</h3><p>点击图中年份或色块，查看对应讨论</p></div></div>
+          <div class="panel-heading"><div><h3>Sentiment distribution by year</h3><p>Select a year or segment to read the matching discussions.</p></div></div>
           <div id="sentiment-legend" class="legend"></div>
-          <div id="sentiment-chart" class="chart-container" aria-label="年度情感分布图"></div>
-          <p class="chart-footnote">n 为当年已标注且相关的讨论条目数；空缺不记作 0%。</p>
+          <div id="sentiment-chart" class="chart-container" aria-label="Annual sentiment distribution chart"></div>
+          <p class="chart-footnote">n counts labelled, relevant discussions in each year. Missing data is not counted as 0%.</p>
         </article>
         <article class="panel coverage-panel">
-          <div class="panel-heading"><div><h3>样本覆盖</h3><p id="coverage-subtitle">候选条数 / 原定配额，点击可筛选</p></div><span id="coverage-target" class="small-badge">每年 40 条 / 平台</span></div>
-          <div id="coverage" class="coverage-grid" aria-label="平台与年份样本覆盖"></div>
-          <div class="coverage-key" id="coverage-key"><span><i class="key-dot complete"></i>配额已满</span><span><i class="key-dot partial"></i>存在缺口</span><span><i class="key-dot empty"></i>尚无样本</span></div>
+          <div class="panel-heading"><div><h3>Sample coverage</h3><p id="coverage-subtitle">Candidates / target quota. Select a cell to filter.</p></div><span id="coverage-target" class="small-badge">40 posts / year / platform</span></div>
+          <div id="coverage" class="coverage-grid" aria-label="Sample coverage by platform and year"></div>
+          <div class="coverage-key" id="coverage-key"><span><i class="key-dot complete"></i>Quota met</span><span><i class="key-dot partial"></i>Below quota</span><span><i class="key-dot empty"></i>No samples</span></div>
           <p id="coverage-note" class="panel-note"></p>
         </article>
       </section>
 
-      <div class="section-heading" id="topics"><div><span class="section-index">03</span><h2>话题与情绪</h2></div></div>
+      <div class="section-heading" id="topics"><div><span class="section-index">03</span><h2>Topics and emotions</h2></div></div>
       <section class="detail-grid">
-        <article class="panel topics-panel"><div class="panel-heading"><div><h3>讨论话题</h3><p id="topics-subtitle">当前筛选中的高频话题</p></div></div><div id="topic-chart"></div><p class="chart-footnote">点击话题查看原帖；占比之和可能超过 100%。</p></article>
-        <article class="panel emotions-panel"><div class="panel-heading"><div><h3>情绪的年度变化</h3><p>保留没有明确表达情绪的讨论</p></div></div><div id="emotion-chart" class="emotion-chart"></div><div class="heatmap-key"><span>较少</span><i></i><span>较多</span><span class="heatmap-denominator">分母：当年相关讨论</span></div></article>
+        <article class="panel topics-panel"><div class="panel-heading"><div><h3>Discussion topics</h3><p id="topics-subtitle">Frequent topics in the current selection</p></div></div><div id="topic-chart"></div><p class="chart-footnote">Select a topic to read the posts. Shares may add up to more than 100%.</p></article>
+        <article class="panel emotions-panel"><div class="panel-heading"><div><h3>Emotions by year</h3><p>Includes posts with no explicit emotion.</p></div></div><div id="emotion-chart" class="emotion-chart"></div><div class="heatmap-key"><span>Less</span><i></i><span>More</span><span class="heatmap-denominator">Base: relevant discussions that year</span></div></article>
       </section>
 
       <section id="voices" class="voices-section">
-        <div class="section-heading"><div><span class="section-index">04</span><h2>样本阅读</h2><span id="voice-count" class="count-badge">—</span></div></div>
+        <div class="section-heading"><div><span class="section-index">04</span><h2>Read the posts</h2><span id="voice-count" class="count-badge">—</span></div></div>
         <div class="panel voices-panel">
-          <div class="voice-filters"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="搜索正文或标注依据" aria-label="搜索正文或标注依据"></label><select id="sentiment-filter" aria-label="情感筛选"><option value="all">全部情感</option><option value="negative">负面</option><option value="positive">正面</option><option value="neutral">中性</option><option value="mixed">混合</option><option value="uncertain">不确定</option></select><select id="relevance-filter" aria-label="相关性筛选"><option value="relevant">仅相关讨论</option><option value="all">全部候选</option><option value="review">建议人工复核</option></select></div>
+          <div class="voice-filters"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Search posts or annotation evidence" aria-label="Search posts or annotation evidence"></label><select id="sentiment-filter" aria-label="Filter by sentiment"><option value="all">All sentiments</option><option value="negative">Negative</option><option value="positive">Positive</option><option value="neutral">Neutral</option><option value="mixed">Mixed</option><option value="uncertain">Uncertain</option></select><select id="relevance-filter" aria-label="Filter by relevance"><option value="relevant">Relevant only</option><option value="all">All candidates</option><option value="review">Needs manual review</option></select></div>
           <div id="active-tags" class="active-tags" hidden></div><div id="post-list" class="post-list" aria-live="polite"></div>
-          <div class="pagination"><span id="pagination-info"></span><div><button id="previous" class="button button-light">← 上一页</button><span id="page-number"></span><button id="next" class="button button-light">下一页 →</button></div></div>
+          <div class="pagination"><span id="pagination-info"></span><div><button id="previous" class="button button-light">← Previous</button><span id="page-number"></span><button id="next" class="button button-light">Next →</button></div></div>
         </div>
       </section>
 
-      <section class="method-section panel" id="method"><div class="method-intro"><h2>研究口径</h2></div><div class="method-notes"><div><span>01 / 统计分母</span><p>情感、话题和情绪只统计已标注且相关的讨论条目。多标签可以共存，没有明确情绪也保留在分母中。</p></div><div><span>02 / 年份与数据范围</span><p id="method-scope">按原始发表时间划分年份，各数据范围分别比较。</p></div><div><span>03 / 理解表达</span><p>模型标签描述作者在该条内容中的表达；生活事件带来的喜悦，不一定代表对招聘市场乐观。</p></div><div><span>04 / 样本的边界</span><p id="method-specific">方便样本描述已采集讨论，不能用来估计整体市场情绪。</p></div></div><details><summary>数据说明</summary><p class="intro" id="page-intro">从真实讨论出发，观察不同年份的话题与情绪。</p><ul id="limitations"></ul><p id="model-note"></p></details></section>
-      <footer class="page-footer"><span>秋招观察</span><span id="footer-updated"></span></footer>
+      <section class="method-section panel" id="method"><div class="method-intro"><h2>Methods</h2></div><div class="method-notes"><div><span>01 / Statistical base</span><p>Sentiment, topics and emotions count only labelled, relevant discussions. Multiple labels can coexist. Posts without an explicit emotion remain in the denominator.</p></div><div><span>02 / Years and datasets</span><p id="method-scope">Years follow the original publication date. Each dataset is compared separately.</p></div><div><span>03 / Interpreting expression</span><p>Model labels describe what the author expresses in a post. Happiness about a life event does not necessarily imply optimism about the job market.</p></div><div><span>04 / Sample limits</span><p id="method-specific">This convenience sample describes the discussions collected. It cannot estimate sentiment across the whole market.</p></div></div><details><summary>About the data</summary><p class="intro" id="page-intro">Explore topics and emotions across years through real discussions.</p><ul id="limitations"></ul><p id="model-note"></p></details></section>
+      <footer class="page-footer"><span>Recruitment Observatory</span><span id="footer-updated"></span></footer>
     </div>
   </main>
   <div id="chart-tooltip" class="chart-tooltip" role="tooltip" hidden></div>

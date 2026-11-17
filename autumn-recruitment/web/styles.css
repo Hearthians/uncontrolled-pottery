@@ -58,6 +58,7 @@ svg {
 button svg {
   width:16px;
   height:16px;
+  flex-shrink:0;
   fill:none;
   stroke:currentColor;
   stroke-width:1.7;
@@ -94,14 +95,18 @@ button svg {
   display:flex;
   gap:11px;
   align-items:center;
-  font-size:20px;
+  font-size:16px;
   font-weight:750;
-  letter-spacing:1px;
-  white-space:nowrap
+  letter-spacing:-.2px;
+  line-height:1.3
+}
+.brand>span:last-child {
+  min-width:0
 }
 .brand-mark {
   height:39px;
   width:39px;
+  flex-shrink:0;
   display:grid;
   place-items:center;
   background:var(--teal);
@@ -139,12 +144,13 @@ button svg {
 }
 .nav-links a {
   display:flex;
-  gap:12px;
-  padding:14px;
+  gap:10px;
+  padding:14px 10px;
   border-radius:9px;
   align-items:center;
   color:#79888b;
-  font-size:13px
+  font-size:13px;
+  line-height:1.5
 }
 .nav-links a:hover {
   background:#f5f8f7
@@ -157,6 +163,7 @@ button svg {
 .nav-links svg {
   width:18px;
   height:18px;
+  flex-shrink:0;
   fill:none;
   stroke:currentColor;
   stroke-width:1.6;
@@ -204,13 +211,17 @@ main {
   max-width:1840px
 }
 .topbar {
-  height:64px;
+  min-height:64px;
   border-bottom:1px solid var(--line);
   display:flex;
   justify-content:space-between;
   align-items:center;
   color:#95a0a4;
-  font-size:11px
+  font-size:12px;
+  gap:10px 20px;
+  flex-wrap:wrap;
+  padding:14px 0;
+  line-height:1.5
 }
 .topbar strong {
   font-weight:500;
@@ -221,7 +232,7 @@ main {
   color:#bdc6c8
 }
 .updated-at {
-  font-size:10px;
+  font-size:11px;
   letter-spacing:.2px
 }
 .page-heading {
@@ -229,7 +240,12 @@ main {
   justify-content:space-between;
   align-items:center;
   gap:20px;
+  flex-wrap:wrap;
   padding:25px 0 22px
+}
+.page-heading>div:first-child {
+  flex:1 1 360px;
+  min-width:0
 }
 .eyebrow {
   font-size:9px;
@@ -265,13 +281,14 @@ h1 span {
 .header-actions {
   display:flex;
   gap:10px;
-  align-items:center
+  align-items:center;
+  flex-wrap:wrap
 }
 .button {
   border:1px solid var(--line);
   border-radius:7px;
   padding:10px 14px;
-  font-size:11px;
+  font-size:12px;
   display:inline-flex;
   gap:7px;
   align-items:center;
@@ -325,7 +342,7 @@ h1 span {
   border-radius:6px;
   padding:6px 9px;
   min-height:32px;
-  font-size:11px;
+  font-size:12px;
   white-space:nowrap
 }
 .sample-mode-button:hover {
@@ -344,7 +361,7 @@ select {
   color:#4c6265;
   border-radius:6px;
   padding:8px 27px 8px 10px;
-  font-size:11px;
+  font-size:12px;
   min-height:33px;
   max-width:100%
 }
@@ -354,10 +371,15 @@ select {
   align-items:center
 }
 #platforms {
-  flex:1 1 auto;
+  flex:1 1 100%;
   flex-wrap:wrap;
   min-width:0;
-  max-width:100%
+  max-width:100%;
+  gap:2px
+}
+#platforms button {
+  padding:8px;
+  line-height:1.4
 }
 .segmented button {
   border:0;
@@ -437,7 +459,7 @@ select {
   width:fit-content;
   cursor:pointer;
   color:#718583;
-  font-size:11px
+  font-size:12px
 }
 .context-note-body {
   padding:8px 0 2px;
@@ -456,6 +478,7 @@ select {
   margin-bottom:29px
 }
 .metric {
+  min-width:0;
   padding:20px 21px 17px;
   border:1px solid var(--line);
   border-radius:10px;
@@ -463,11 +486,12 @@ select {
   box-shadow:var(--shadow)
 }
 .metric-label {
-  font-size:11px;
+  font-size:12px;
   color:#819093;
   display:flex;
   align-items:center;
-  justify-content:space-between
+  justify-content:space-between;
+  line-height:1.5
 }
 .metric-icon {
   height:25px;
@@ -501,15 +525,18 @@ select {
   letter-spacing:0
 }
 .metric-detail {
-  font-size:10px;
+  font-size:11px;
   color:#99a5a7;
-  min-height:15px
+  min-height:15px;
+  line-height:1.6;
+  overflow-wrap:anywhere
 }
 .section-heading {
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:14px;
+  flex-wrap:wrap;
   margin:26px 0 16px;
   scroll-margin-top:22px
 }
@@ -527,18 +554,20 @@ select {
   letter-spacing:1px
 }
 .section-heading h2 {
-  font-size:16px;
+  font-size:17px;
   font-weight:650;
   letter-spacing:.2px;
   margin:0
 }
 .scope-label {
-  font-size:10px;
+  font-size:11px;
   color:#91a19f;
   background:#edf2f1;
   border-radius:4px;
   padding:4px 8px;
-  margin-left:2px
+  margin-left:2px;
+  line-height:1.5;
+  overflow-wrap:anywhere
 }
 .section-aside {
   color:#99a5a7;
@@ -547,11 +576,12 @@ select {
 .unit-toggle {
   background:#eaf0ee;
   padding:3px;
-  border-radius:7px
+  border-radius:7px;
+  flex-shrink:0
 }
 .unit-toggle button {
   padding:5px 10px;
-  font-size:10px
+  font-size:11px
 }
 .unit-toggle button.active {
   background:white;
@@ -563,6 +593,7 @@ select {
   gap:20px
 }
 .panel {
+  min-width:0;
   border:1px solid var(--line);
   border-radius:11px;
   background:var(--surface);
@@ -573,17 +604,22 @@ select {
   display:flex;
   justify-content:space-between;
   gap:10px;
+  flex-wrap:wrap;
   align-items:flex-start;
   padding:23px 23px 0
 }
+.panel-heading>div {
+  min-width:0;
+  flex:1 1 180px
+}
 .panel-heading h3 {
-  font-size:13px;
+  font-size:14px;
   letter-spacing:.1px;
   margin-bottom:7px;
   font-weight:650
 }
 .panel-heading p {
-  font-size:10px;
+  font-size:12px;
   color:#9ba6a8;
   line-height:1.6;
   margin-bottom:0
@@ -599,7 +635,7 @@ select {
   display:flex;
   gap:17px;
   flex-wrap:wrap;
-  font-size:9px;
+  font-size:11px;
   color:#8e9b9e;
   padding:19px 23px 0
 }
@@ -638,7 +674,7 @@ select {
   cursor:pointer
 }
 .chart-footnote {
-  font-size:9px;
+  font-size:11px;
   color:#a4adae;
   line-height:1.7;
   margin:0;
@@ -646,27 +682,28 @@ select {
 }
 .small-badge {
   background:#f3f6f5;
-  font-size:8px;
+  font-size:10px;
   color:#94a49f;
   padding:5px 6px;
   border-radius:4px;
-  white-space:nowrap
+  line-height:1.5;
+  max-width:100%
 }
 .coverage-grid {
   display:grid;
-  grid-template-columns:54px repeat(5,minmax(0,1fr));
+  grid-template-columns:88px repeat(5,minmax(0,1fr));
   gap:9px 7px;
   padding:28px 22px 20px;
   align-items:center
 }
 .coverage-year {
   color:#9aa8aa;
-  font-size:9px;
+  font-size:10px;
   text-align:center;
   margin-bottom:8px
 }
 .coverage-platform {
-  font-size:10px;
+  font-size:11px;
   color:#6e8585;
   display:flex;
   align-items:center;
@@ -709,7 +746,7 @@ select {
   font-weight:600
 }
 .coverage-cell small {
-  font-size:7px;
+  font-size:9px;
   color:#a4bab0;
   margin-top:4px
 }
@@ -742,15 +779,17 @@ select {
 .coverage-key {
   display:flex;
   gap:15px;
-  font-size:8px;
+  font-size:10px;
   color:#a2aeae;
   padding:3px 22px 0;
-  justify-content:flex-end
+  justify-content:flex-end;
+  flex-wrap:wrap
 }
 .coverage-key span {
   display:flex;
   gap:5px;
-  align-items:center
+  align-items:center;
+  white-space:nowrap
 }
 .key-dot.complete {
   background:#b4d0c2
@@ -762,7 +801,7 @@ select {
   background:#d9dfe4
 }
 .panel-note {
-  font-size:9px;
+  font-size:11px;
   line-height:1.9;
   color:#a2abaa;
   margin:19px 22px 20px;
@@ -795,29 +834,31 @@ select {
   justify-content:space-between;
   gap:8px;
   align-items:center;
-  font-size:10px;
+  font-size:12px;
   margin-bottom:6px
 }
 .topic-name {
   color:#6e8384;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap
+  flex:1;
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.5
 }
 .topic-name span {
-  font-size:8px;
+  font-size:10px;
   color:#abb9b5;
   margin-right:9px;
   font-family:Inter,"Segoe UI",sans-serif
 }
 .topic-value {
   font-variant-numeric:tabular-nums;
-  font-size:10px;
+  font-size:11px;
   color:#6f8b83;
   white-space:nowrap
 }
 .topic-value small {
-  font-size:8px;
+  font-size:10px;
   color:#a8b4b0;
   margin-left:6px
 }
@@ -847,30 +888,32 @@ select {
 }
 .heatmap {
   display:grid;
-  grid-template-columns:66px repeat(5,minmax(0,1fr));
+  grid-template-columns:100px repeat(5,minmax(0,1fr));
   gap:6px 7px;
   align-items:center
 }
 .heatmap-year {
-  font-size:9px;
+  font-size:10px;
   text-align:center;
   color:#9ba8aa;
   padding-bottom:8px
 }
 .emotion-name {
-  font-size:10px;
+  font-size:11px;
   color:#7e9190;
-  white-space:nowrap
+  line-height:1.5;
+  min-width:0;
+  overflow-wrap:anywhere
 }
 .emotion-name.missing {
-  font-size:9px;
+  font-size:11px;
   color:#a3b1ad
 }
 .heat-cell {
   border:1px solid transparent;
   min-height:28px;
   border-radius:4px;
-  font-size:9px;
+  font-size:10px;
   font-variant-numeric:tabular-nums;
   transition:filter .15s
 }
@@ -889,9 +932,11 @@ select {
   display:flex;
   align-items:center;
   gap:7px;
-  font-size:8px;
+  font-size:10px;
   color:#a1aeaa;
-  margin:16px 23px 21px
+  margin:16px 23px 21px;
+  flex-wrap:wrap;
+  line-height:1.5
 }
 .heatmap-key>i {
   height:7px;
@@ -901,7 +946,8 @@ select {
   border-radius:2px
 }
 .heatmap-denominator {
-  margin-left:auto
+  margin-left:auto;
+  flex-basis:100%
 }
 .count-badge {
   font-size:10px;
@@ -919,6 +965,7 @@ select {
 .voice-filters {
   display:flex;
   gap:10px;
+  flex-wrap:wrap;
   padding:18px 22px;
   border-bottom:1px solid var(--line);
   background:#fdfefe
@@ -928,7 +975,8 @@ select {
   align-items:center;
   gap:8px;
   max-width:420px;
-  flex:1
+  flex:1 1 260px;
+  min-width:0
 }
 .search-field svg {
   fill:none;
@@ -945,7 +993,7 @@ select {
   background:transparent;
   padding:8px 0;
   color:#536e6b;
-  font-size:11px;
+  font-size:12px;
   outline:none
 }
 .search-field input::placeholder {
@@ -966,7 +1014,7 @@ select {
   background:#f1f7f3;
   color:#5b8e77;
   padding:5px 8px;
-  font-size:10px
+  font-size:11px
 }
 .filter-tag span {
   margin-left:9px;
@@ -986,7 +1034,7 @@ select {
   display:flex;
   gap:8px;
   align-items:center;
-  font-size:9px;
+  font-size:11px;
   color:#a2afaf;
   margin-bottom:11px;
   flex-wrap:wrap
@@ -994,7 +1042,7 @@ select {
 .platform-badge {
   display:inline-flex;
   align-items:center;
-  font-size:9px;
+  font-size:11px;
   gap:6px;
   color:#8c9c99
 }
@@ -1022,17 +1070,17 @@ select {
   padding-left:8px
 }
 .post-sentiment {
-  font-size:8px;
+  font-size:10px;
   border-radius:4px;
   padding:4px 7px;
   margin-left:auto
 }
 .post-confidence {
-  font-size:8px;
+  font-size:10px;
   color:#aeb9b6
 }
 .post-body {
-  font-size:12px;
+  font-size:13px;
   line-height:1.9;
   color:#5c7070;
   white-space:pre-wrap;
@@ -1051,11 +1099,11 @@ select {
   border:0;
   background:none;
   color:#86a097;
-  font-size:9px;
+  font-size:11px;
   padding:0 0 3px
 }
 .post-evidence {
-  font-size:10px;
+  font-size:11px;
   color:#96a39e;
   margin:9px 0 11px;
   line-height:1.7;
@@ -1068,7 +1116,7 @@ select {
 .post-evidence span {
   color:#7f998c;
   margin-right:7px;
-  font-size:8px
+  font-size:10px
 }
 .post-bottom {
   display:flex;
@@ -1077,7 +1125,7 @@ select {
   flex-wrap:wrap
 }
 .post-tag {
-  font-size:8px;
+  font-size:10px;
   color:#7b9488;
   background:#f1f6f2;
   border:0;
@@ -1094,7 +1142,7 @@ select {
 .source-link {
   margin-left:auto;
   color:#9aaea6;
-  font-size:9px;
+  font-size:11px;
   white-space:nowrap
 }
 .source-link:hover {
@@ -1107,30 +1155,31 @@ select {
   border-top:1px solid var(--line);
   padding:16px 22px;
   gap:12px;
-  font-size:10px;
+  font-size:11px;
   color:#a4b1ad
 }
 .pagination>div {
   display:flex;
   align-items:center;
-  gap:13px
+  gap:13px;
+  flex-wrap:wrap
 }
 .pagination .button {
-  font-size:9px;
-  min-height:29px;
+  font-size:11px;
+  min-height:33px;
   padding:6px 10px
 }
 #page-number {
   min-width:30px;
   text-align:center;
   font-variant-numeric:tabular-nums;
-  font-size:9px
+  font-size:11px
 }
 .empty-state {
   text-align:center;
   padding:45px 20px;
   color:#a5b2ae;
-  font-size:11px;
+  font-size:12px;
   line-height:1.9
 }
 .empty-state strong {
@@ -1179,11 +1228,11 @@ select {
   gap:20px 26px
 }
 .method-notes span {
-  font-size:9px;
+  font-size:11px;
   color:#6b8d7b
 }
 .method-notes p {
-  font-size:10px;
+  font-size:12px;
   line-height:1.9;
   color:#96a69d;
   margin:7px 0 0
@@ -1193,7 +1242,7 @@ select {
   border-top:1px solid #e3ebe5;
   padding-top:16px;
   color:#8ea497;
-  font-size:10px;
+  font-size:12px;
   line-height:1.9
 }
 .method-section summary {
@@ -1209,7 +1258,7 @@ select {
   padding:3px 0
 }
 .method-section details p {
-  font-size:9px;
+  font-size:11px;
   color:#a7b4ac;
   margin:12px 0 0
 }
@@ -1219,7 +1268,7 @@ select {
   gap:20px;
   padding:26px 0;
   color:#a4b1af;
-  font-size:9px
+  font-size:11px
 }
 .page-footer span>span {
   padding:0 6px
@@ -1328,7 +1377,7 @@ body.is-loading #refresh {
     padding-right:16px
   }
   .brand {
-    font-size:18px;
+    font-size:15px;
     gap:8px
   }
   .brand small {
@@ -1360,7 +1409,7 @@ body.is-loading #refresh {
   }
   .header-actions .button {
     padding:9px 10px;
-    font-size:10px
+    font-size:12px
   }
   .overview-grid {
     grid-template-columns:minmax(0,1.3fr) minmax(315px,1fr);
@@ -1383,25 +1432,25 @@ body.is-loading #refresh {
     padding-right:18px
   }
   .small-badge {
-    font-size:7px
+    font-size:10px
   }
   .coverage-grid {
     padding-left:17px;
     padding-right:17px;
     gap:8px 5px;
-    grid-template-columns:47px repeat(5,minmax(0,1fr))
+    grid-template-columns:80px repeat(5,minmax(0,1fr))
   }
   .coverage-cell strong {
     font-size:13px
   }
   .coverage-platform {
-    font-size:9px
+    font-size:11px
   }
   .panel-kicker {
     font-size:6px
   }
   .heatmap {
-    grid-template-columns:58px repeat(5,minmax(0,1fr));
+    grid-template-columns:94px repeat(5,minmax(0,1fr));
     gap:6px 5px
   }
   .emotion-chart {
@@ -1448,7 +1497,7 @@ body.is-loading #refresh {
     display:none
   }
   .coverage-grid {
-    grid-template-columns:42px repeat(5,minmax(0,1fr));
+    grid-template-columns:78px repeat(5,minmax(0,1fr));
     padding-left:14px;
     padding-right:14px
   }
@@ -1465,10 +1514,10 @@ body.is-loading #refresh {
     padding:16px 14px
   }
   .metric-label {
-    font-size:10px
+    font-size:12px
   }
   .metric-detail {
-    font-size:9px
+    font-size:11px
   }
   .method-section {
     grid-template-columns:1fr;
@@ -1489,11 +1538,12 @@ body.is-loading #refresh {
     padding:0 18px
   }
   .topbar {
-    height:48px;
-    font-size:11px
+    min-height:48px;
+    font-size:12px;
+    padding:10px 0
   }
   .updated-at {
-    font-size:10px
+    font-size:11px
   }
   .page-heading {
     padding:20px 0 18px;
@@ -1543,11 +1593,11 @@ body.is-loading #refresh {
   }
   .year-filter button[data-year] {
     padding:6px 4px;
-    font-size:11px
+    font-size:12px
   }
   .year-filter>.text-button {
     padding:6px 0;
-    font-size:11px
+    font-size:12px
   }
   .metrics {
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -1562,14 +1612,14 @@ body.is-loading #refresh {
     padding:16px
   }
   .metric-label {
-    font-size:11px
+    font-size:12px
   }
   .overview-grid,.detail-grid {
     grid-template-columns:1fr;
     gap:17px
   }
   .section-heading h2 {
-    font-size:14px
+    font-size:16px
   }
   .section-aside {
     display:none
@@ -1578,14 +1628,14 @@ body.is-loading #refresh {
     margin-top:25px
   }
   .scope-label {
-    font-size:8px;
+    font-size:10px;
     padding:3px 5px
   }
   .panel-heading {
     padding:20px 20px 0
   }
   .panel-heading h3 {
-    font-size:13px
+    font-size:14px
   }
   .panel-kicker {
     display:block;
@@ -1598,7 +1648,7 @@ body.is-loading #refresh {
     max-height:285px
   }
   .coverage-grid {
-    grid-template-columns:58px repeat(5,minmax(0,1fr));
+    grid-template-columns:88px repeat(5,minmax(0,1fr));
     gap:9px;
     padding:22px
   }
@@ -1617,20 +1667,20 @@ body.is-loading #refresh {
   }
   .small-badge {
     display:block;
-    font-size:8px
+    font-size:10px
   }
   .coverage-key {
-    font-size:9px
+    font-size:10px
   }
   .panel-note {
-    font-size:10px;
+    font-size:11px;
     margin-top:16px
   }
   .emotion-chart {
     padding:22px 23px 0
   }
   .heatmap {
-    grid-template-columns:68px repeat(5,minmax(0,1fr));
+    grid-template-columns:100px repeat(5,minmax(0,1fr));
     gap:7px
   }
   .heat-cell {
@@ -1653,7 +1703,8 @@ body.is-loading #refresh {
     flex-basis:100%
   }
   .voice-filters select {
-    flex:1
+    flex:1 1 135px;
+    min-width:0
   }
   .post-list {
     padding:0 17px
@@ -1662,16 +1713,16 @@ body.is-loading #refresh {
     display:none
   }
   .post-body {
-    font-size:12px
+    font-size:13px
   }
   .post-header {
-    font-size:8px;
+    font-size:11px;
     gap:6px
   }
   .pagination {
     padding:13px 15px;
     flex-wrap:wrap;
-    font-size:9px
+    font-size:11px
   }
   .pagination>div {
     gap:8px
@@ -1686,7 +1737,7 @@ body.is-loading #refresh {
     gap:17px
   }
   .page-footer {
-    font-size:8px
+    font-size:11px
   }
   .page-footer>span:last-child {
     display:none
@@ -1731,7 +1782,7 @@ body.is-loading #refresh {
     display:none
   }
   .filter-bar .segmented button {
-    font-size:11px;
+    font-size:12px;
     padding:7px 8px
   }
   .metric {
@@ -1741,7 +1792,7 @@ body.is-loading #refresh {
     font-size:27px
   }
   .metric-label {
-    font-size:11px
+    font-size:12px
   }
   .metric-icon {
     width:21px;
@@ -1749,7 +1800,7 @@ body.is-loading #refresh {
     font-size:15px
   }
   .metric-detail {
-    font-size:10px
+    font-size:11px
   }
   .section-heading>div:first-child {
     gap:6px
@@ -1758,10 +1809,10 @@ body.is-loading #refresh {
     display:none
   }
   .section-heading h2 {
-    font-size:13px
+    font-size:15px
   }
   .unit-toggle button {
-    font-size:8px;
+    font-size:11px;
     padding:5px 7px
   }
   .panel-heading {
@@ -1774,7 +1825,7 @@ body.is-loading #refresh {
   .legend {
     padding-left:16px;
     gap:12px;
-    font-size:8px
+    font-size:11px
   }
   .chart-container {
     padding-left:4px;
@@ -1783,62 +1834,62 @@ body.is-loading #refresh {
   }
   .chart-footnote {
     padding-left:16px;
-    font-size:8px
+    font-size:11px
   }
   .coverage-grid {
     padding:20px 14px;
-    grid-template-columns:40px repeat(5,minmax(0,1fr));
+    grid-template-columns:72px repeat(5,minmax(0,1fr));
     gap:5px
   }
   .coverage-platform {
-    font-size:9px
+    font-size:10px
   }
   .coverage-cell strong {
     font-size:12px
   }
   .coverage-cell small {
-    font-size:6px
+    font-size:8px
   }
   .coverage-cell {
     min-height:45px
   }
   .coverage-year {
-    font-size:8px
+    font-size:10px
   }
   .coverage-key {
     padding-left:15px;
     padding-right:15px;
     gap:10px;
-    font-size:7px
+    font-size:10px
   }
   .panel-note {
     margin-left:15px;
     margin-right:15px;
-    font-size:9px
+    font-size:11px
   }
   .emotion-chart {
     padding-left:15px;
     padding-right:15px
   }
   .heatmap {
-    grid-template-columns:56px repeat(5,minmax(0,1fr));
+    grid-template-columns:78px repeat(5,minmax(0,1fr));
     gap:5px
   }
   .emotion-name {
-    font-size:9px
+    font-size:10px
   }
   .emotion-name.missing {
-    font-size:8px
+    font-size:10px
   }
   .heat-cell {
-    font-size:8px;
+    font-size:10px;
     min-height:29px;
     padding:0
   }
   .heatmap-key {
     margin-left:15px;
     margin-right:15px;
-    font-size:7px;
+    font-size:10px;
     gap:5px
   }
   .heatmap-key>i {
@@ -1851,24 +1902,24 @@ body.is-loading #refresh {
     gap:5px
   }
   .post-date {
-    font-size:7px;
+    font-size:10px;
     padding-left:5px
   }
   .post-sentiment {
     padding:3px 5px;
-    font-size:7px
+    font-size:10px
   }
   .pagination-info {
-    font-size:8px
+    font-size:11px
   }
   .method-intro h2 {
     font-size:15px
   }
   .post-tag {
-    font-size:7px
+    font-size:10px
   }
   .post-evidence {
-    font-size:9px
+    font-size:11px
   }
 }
 @media(prefers-reduced-motion:reduce) {
@@ -1882,12 +1933,12 @@ body.is-loading #refresh {
 }
 
 .anxiety-section {scroll-margin-top:24px}
-.anxiety-intro {font-size:11px;color:#84988d;line-height:1.8;margin:-3px 0 15px}
+.anxiety-intro {font-size:12px;color:#84988d;line-height:1.8;margin:-3px 0 15px}
 .anxiety-controls {display:flex;gap:15px;align-items:center;flex-wrap:wrap;padding:15px 18px;margin-bottom:14px}
-.anxiety-controls label {display:flex;align-items:center;gap:7px;font-size:10px;color:#6d877a;min-width:0}
-.anxiety-controls input,.anxiety-controls select {border:1px solid #dce7e0;border-radius:5px;padding:7px 8px;background:#fff;color:#527565;min-height:33px;max-width:100%;font-size:11px}
+.anxiety-controls label {display:flex;align-items:center;gap:7px;font-size:12px;color:#6d877a;min-width:0;line-height:1.5}
+.anxiety-controls input,.anxiety-controls select {border:1px solid #dce7e0;border-radius:5px;padding:7px 8px;background:#fff;color:#527565;min-height:33px;max-width:100%;font-size:12px}
 .anxiety-controls input {width:75px;font-variant-numeric:tabular-nums}
-.anxiety-controls .text-button {margin-left:auto;font-size:10px}
+.anxiety-controls .text-button {margin-left:auto;font-size:12px}
 .anxiety-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
 .anxiety-metrics .metric-value {font-size:28px;font-variant-numeric:tabular-nums}
 .anxiety-charts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
@@ -1897,17 +1948,17 @@ body.is-loading #refresh {
 .anxiety-chart [role=button] {cursor:pointer}
 .anxiety-chart [role=button]:hover {opacity:.8}
 .post-anxiety {margin:12px 0;background:#f6f9f6;border:1px solid #e8efe8;border-radius:6px;padding:11px 12px}
-.post-anxiety-label {display:flex;align-items:center;gap:10px;font-size:10px;color:#78917d}
+.post-anxiety-label {display:flex;align-items:center;gap:10px;font-size:11px;color:#78917d;flex-wrap:wrap;line-height:1.5}
 .post-anxiety-label strong {font-size:14px;color:#477956;font-variant-numeric:tabular-nums;min-width:36px}
-.post-anxiety-label small {font-size:9px;color:#9cad9f;white-space:nowrap}
+.post-anxiety-label small {font-size:10px;color:#9cad9f}
 .post-anxiety-track {display:block;max-width:240px;min-width:30px;flex:1;height:5px;background:#e4ece2;border-radius:4px;overflow:hidden}
 .post-anxiety-track i {display:block;height:100%;background:#6d9b75;border-radius:4px}
 .post-anxiety:not([data-anxiety-status=scored]) .post-anxiety-label strong {font-size:11px;color:#9b9b85;min-width:48px}
-.anxiety-evidence {margin-top:8px;font-size:10px;line-height:1.8;color:#7e9082}
+.anxiety-evidence {margin-top:8px;font-size:11px;line-height:1.8;color:#7e9082}
 .anxiety-evidence summary {cursor:pointer;width:fit-content;color:#6e8d73}
 .anxiety-evidence blockquote {margin:9px 0;padding:0 10px;border-left:2px solid #d4e2d2;white-space:pre-wrap;overflow-wrap:anywhere}
 .anxiety-evidence p {margin:8px 0 0;overflow-wrap:anywhere}
-.anxiety-evidence .anxiety-model {font-size:9px;color:#9aa69a}
+.anxiety-evidence .anxiety-model {font-size:10px;color:#9aa69a}
 @media(max-width:960px) {
   .anxiety-controls {gap:10px}
   .anxiety-controls .text-button {margin-left:0}
@@ -1919,7 +1970,7 @@ body.is-loading #refresh {
   .anxiety-charts {grid-template-columns:1fr;gap:17px}
   .anxiety-chart text {font-size:16px}
   .anxiety-controls {padding:13px;gap:12px}
-  .anxiety-controls label {flex:1 1 125px;justify-content:space-between}
+  .anxiety-controls label {flex:1 1 190px;justify-content:space-between}
   .anxiety-controls label:nth-child(n+3) {flex-basis:100%}
   .anxiety-controls select {flex:1;min-width:0}
   .anxiety-controls .text-button {min-height:32px}

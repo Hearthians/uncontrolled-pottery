@@ -94,6 +94,8 @@ python3 run.py serve --host 127.0.0.1 --port 8765
 
 浏览器打开 <http://127.0.0.1:8765/>。Windows 已部署环境也可双击项目中的 `launch-dashboard.cmd`；PowerShell 命令见 [WINDOWS.md](WINDOWS.md)。命令行服务保持终端运行，用 `Ctrl+C` 停止。默认地址仅供本机访问。
 
+网页界面、图表标签、评分解释及 CSV 表头统一为英文；帖子正文和逐字证据保留原语言，原始标签和评分不变。英文说明从本地 `web/content.en.json` 读取，刷新与筛选不调用模型。详见 [英文界面说明](docs/english-interface.md)。
+
 页面可按平台、年份切换，比较年度情感分布、高频话题、情绪和样本覆盖；图表可点击查看对应原帖。条数与占比可以切换，只统计已标注且相关的帖子；年度图按各年相关数计算占比，高频话题按当前平台和年份范围的相关数计算占比。无样本的年份显示缺口，不当作 0% 情绪。
 
 “按年配额样本”读取 `outputs/`；“小红书可用补充集”读取 `outputs/xiaohongshu-available/`。这两套数据有重叠，不能相加；补充集偏重 2026 年。另有“国内平台补充集”与“海外英文就业讨论”，分别读取 `outputs/additional-chinese/` 和 `outputs/overseas-employment/`。海外组包含一般就业及职场讨论，与中文校园秋招分开解读。
