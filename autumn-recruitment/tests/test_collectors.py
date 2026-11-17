@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlparse
@@ -180,6 +180,26 @@ class CollectorTests(unittest.TestCase):
             self.assertNotIn("private-user", str(caught.exception))
             self.assertNotIn("private-secret", str(caught.exception))
             self.assertNotIn(value, str(caught.exception))
+
+    def test_x_onboarding_login_gate_is_detected_from_url(self):
+        from autumn_recruitment.collectors.browser import _check_page
+        page = SimpleNamespace(url="https://x.com/i/jf/onboarding/web?flow_name=login&mode=login")
+        with self.assertRaisesRegex(CollectorError, "需要先登录平台"):
+            _check_page(page)
+
+    def test_other_onboarding_modes_are_not_login_gates(self):
+        from autumn_recruitment.collectors.browser import _check_page
+        for url in (
+            "https://x.com/i/jf/onboarding/web?mode=signup",
+            "https://x.com/i/jf/onboarding/web",
+            "https://x.com/search?mode=login",
+            "https://example.com/i/jf/onboarding/web?mode=login",
+        ):
+            with self.subTest(url=url):
+                page = MagicMock()
+                page.url = url
+                page.locator.return_value.first.is_visible.return_value = False
+                _check_page(page)
 
     @patch.dict(os.environ, {"TEST_X_TOKEN": "fixture-token"})
     def test_archive_denial_is_explicit_and_does_not_fallback(self):

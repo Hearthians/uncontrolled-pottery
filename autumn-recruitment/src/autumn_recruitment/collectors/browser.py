@@ -9,7 +9,7 @@ import re
 import time
 from datetime import time as clock_time, timedelta, timezone
 from pathlib import Path
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from .normalize import CollectorError, date_window, in_window, platform_name, post
 from .x_api import write_jsonl
@@ -120,6 +120,13 @@ def _response_allowed(platform: str, url: str) -> bool:
 
 def _check_page(page: object) -> None:
     url = page.url.lower()
+    parsed = urlparse(url)
+    if (
+        (parsed.hostname == "x.com" or (parsed.hostname or "").endswith(".x.com"))
+        and parsed.path.rstrip("/") == "/i/jf/onboarding/web"
+        and "login" in parse_qs(parsed.query).get("mode", [])
+    ):
+        raise CollectorError("需要先登录平台；请使用同一个 profile_dir 完成正常登录后重试")
     if any(marker in url for marker in ("/captcha", "/challenge", "/account/access", "/verify")):
         raise CollectorError("平台要求安全验证；请停止采集，在正常浏览器中处理后重试")
     for selector in ('[class*="captcha"]', '#captcha', '#pl_common_sassfilter'):

@@ -141,6 +141,7 @@ class LLMClient:
                 with opener.open(request, timeout=self.settings.timeout) as response:
                     return json.load(response)
             except urllib.error.HTTPError as exc:
+                exc.close()
                 if exc.code in {429, 502, 503, 504} and attempt < 2:
                     time.sleep(2 ** attempt)
                     continue

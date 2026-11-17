@@ -50,6 +50,7 @@ def collect_x_api(query: str, start: str, end: str, output_path: str | Path, lim
                 with urlopen(request, timeout=30) as response:
                     payload = json.load(response)
             except HTTPError as error:
+                error.close()
                 reason = {
                     400: "搜索参数被拒绝；请检查时间范围与查询语法",
                     401: "Bearer Token 无效或已过期",
