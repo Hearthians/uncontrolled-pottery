@@ -137,7 +137,7 @@ class CollectorTests(unittest.TestCase):
         manager.__enter__.return_value = runtime
         sync_module = ModuleType("playwright.sync_api")
         sync_module.sync_playwright = lambda: manager
-        for options in ({}, {"headless": True, "executable_path": Path("/usr/bin/chromium")}):
+        for options in ({}, {"headless": True, "executable_path": Path("/usr/bin/chromium")}, {"proxy_server": "http://127.0.0.1:7890"}):
             with self.subTest(options=options), tempfile.TemporaryDirectory() as directory, patch.dict(sys.modules, {"playwright": ModuleType("playwright"), "playwright.sync_api": sync_module}):
                 context.close.reset_mock()
                 output = Path(directory) / "weibo.jsonl"
@@ -147,10 +147,14 @@ class CollectorTests(unittest.TestCase):
                 context.close.assert_called_once()
                 launch_kwargs = runtime.chromium.launch_persistent_context.call_args.kwargs
                 self.assertEqual(launch_kwargs["headless"], options.get("headless", False))
-                if options:
+                if "executable_path" in options:
                     self.assertEqual(launch_kwargs["executable_path"], str(Path("/usr/bin/chromium")))
                 else:
                     self.assertNotIn("executable_path", launch_kwargs)
+                if "proxy_server" in options:
+                    self.assertEqual(launch_kwargs["proxy"], {"server": options["proxy_server"]})
+                else:
+                    self.assertNotIn("proxy", launch_kwargs)
 
     def test_browser_cli_accepts_headless_and_executable_overrides(self):
         from autumn_recruitment.cli import make_parser
@@ -158,9 +162,24 @@ class CollectorTests(unittest.TestCase):
         defaults = make_parser().parse_args(command)
         self.assertFalse(defaults.headless)
         self.assertIsNone(defaults.browser_executable)
-        overrides = make_parser().parse_args(command + ["--headless", "--browser-executable", "/usr/bin/chromium"])
+        self.assertIsNone(defaults.proxy_server)
+        overrides = make_parser().parse_args(command + ["--headless", "--browser-executable", "/usr/bin/chromium", "--proxy-server", "socks5://127.0.0.1:7891"])
         self.assertTrue(overrides.headless)
         self.assertEqual(overrides.browser_executable, "/usr/bin/chromium")
+        self.assertEqual(overrides.proxy_server, "socks5://127.0.0.1:7891")
+
+    def test_proxy_validation_rejects_credentials_without_echoing_input(self):
+        from autumn_recruitment.collectors.browser import _validate_proxy_server
+        for scheme in ("http", "https", "socks5"):
+            with self.subTest(scheme=scheme):
+                value = f"{scheme}://127.0.0.1:7890"
+                self.assertEqual(_validate_proxy_server(value), value)
+        for value in ("http://private-user:private-secret@localhost:7890", "ftp://localhost:7890", "http://localhost:99999", "http://localhost/path", "http://localhost?token=private-secret", "http://[malformed", "http://localhost\n:7890"):
+            with self.subTest(value=value), self.assertRaises(ValueError) as caught:
+                _validate_proxy_server(value)
+            self.assertNotIn("private-user", str(caught.exception))
+            self.assertNotIn("private-secret", str(caught.exception))
+            self.assertNotIn(value, str(caught.exception))
 
     @patch.dict(os.environ, {"TEST_X_TOKEN": "fixture-token"})
     def test_archive_denial_is_explicit_and_does_not_fallback(self):

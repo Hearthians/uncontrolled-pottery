@@ -52,6 +52,7 @@ def make_parser() -> argparse.ArgumentParser:
     browser.add_argument("--timeout", type=int, default=180)
     browser.add_argument("--headless", action="store_true", help="使用无界面 Chromium，复用同一登录资料")
     browser.add_argument("--browser-executable", help="可选 Chromium 可执行文件路径")
+    browser.add_argument("--proxy-server", help="本次浏览器专用代理 URL（http/https/socks5，不含账号密码）")
     xapi = commands.add_parser("collect-x-api", help="官方 X 搜索接口，需对应历史权限")
     xapi.add_argument("--query", required=True)
     xapi.add_argument("--start", required=True)
@@ -109,7 +110,8 @@ def main(argv: list[str] | None = None) -> int:
                     profile = Path(config["data_dir"]) / "browser-profiles" / platform
                     posts = collect_browser(platform, args.query, args.start, args.end, profile, output,
                                             args.limit, timeout_seconds=args.timeout,
-                                            headless=args.headless, executable_path=args.browser_executable)
+                                            headless=args.headless, executable_path=args.browser_executable,
+                                            proxy_server=args.proxy_server)
                 else:
                     from .collectors import collect_x_api
                     posts = collect_x_api(args.query, args.start, args.end, output, args.limit, endpoint=args.endpoint)

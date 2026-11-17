@@ -167,7 +167,29 @@ def build_browser_search_url(platform: str, query: str, start: str, end: str) ->
     return "https://x.com/search?" + urlencode({"q": search, "src": "typed_query", "f": "live"})
 
 
-def collect_browser(platform: str, query: str, start: str, end: str, profile_dir: str | Path, output_path: str | Path, limit: int = 200, *, timeout_seconds: int = 180, headless: bool = False, executable_path: str | Path | None = None) -> list[dict]:
+def _validate_proxy_server(value: str) -> str:
+    """Accept a browser proxy address without putting user input in exceptions."""
+    message = "proxy-server 必须为 http、https 或 socks5 代理地址，且不能包含账号密码、路径或查询参数"
+    try:
+        parsed = urlparse(value)
+        if (
+            parsed.scheme not in {"http", "https", "socks5"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"", "/"}
+            or parsed.params or parsed.query or parsed.fragment
+            or any(ord(character) < 33 for character in value)
+        ):
+            raise ValueError(message)
+        # Accessing port validates malformed/out-of-range port numbers.
+        parsed.port
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError(message) from None
+    return value.rstrip("/")
+
+
+def collect_browser(platform: str, query: str, start: str, end: str, profile_dir: str | Path, output_path: str | Path, limit: int = 200, *, timeout_seconds: int = 180, headless: bool = False, executable_path: str | Path | None = None, proxy_server: str | None = None) -> list[dict]:
     """Collect a bounded sample using a persistent profile; end is exclusive.
 
     Search ranking limits historical coverage. A short result is returned as a short
@@ -179,6 +201,7 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
     platform = platform_name(platform)
     if limit < 1 or timeout_seconds < 1:
         raise ValueError("limit 和 timeout_seconds 必须为正整数")
+    browser_proxy = _validate_proxy_server(proxy_server) if proxy_server is not None else None
     window = date_window(start, end, platform)
     try:
         from playwright.sync_api import sync_playwright
@@ -219,6 +242,8 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
             launch_options = {"headless": headless, "viewport": {"width": 1360, "height": 900}, "locale": "zh-CN"}
             if executable_path is not None:
                 launch_options["executable_path"] = str(Path(executable_path).expanduser())
+            if browser_proxy is not None:
+                launch_options["proxy"] = {"server": browser_proxy}
             context = playwright.chromium.launch_persistent_context(str(directory), **launch_options)
             try:
                 context.on("response", response_received)

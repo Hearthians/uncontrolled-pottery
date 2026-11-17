@@ -91,6 +91,8 @@ export PLAYWRIGHT_BROWSERS_PATH="$PWD/data/browser-binaries"
 
 没有图形桌面的服务器可加 `--headless`，复用同一平台资料目录。已有 Chromium 时，可加 `--browser-executable /path/to/chrome` 指定本机可执行文件；省略时使用 Playwright 安装的浏览器。无界面模式仍会在登录或验证要求处停止，需要人工登录时应回到可见窗口完成。
 
+需要通过本机 Clash 等代理访问时，可给采集命令加 `--proxy-server http://127.0.0.1:7890`，端口按实际配置填写。此参数仅作用于本次浏览器进程，支持 `http`、`https`、`socks5` 地址，拒绝 URL 内的账号密码；省略时不指定浏览器代理。
+
 获得 X API Token 后，通过当前终端环境设置 `X_BEARER_TOKEN`，不要写进代码或提交配置：
 
 ```bash

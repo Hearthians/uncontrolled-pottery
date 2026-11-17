@@ -60,6 +60,14 @@ $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location).Path 'data\browser-bina
 
 `sample` 显示每个平台、每个年份的实际样本与缺口。默认目标为 2022—2026 年每个平台每年 40 条，共 200 条；候选数据需要多于最终样本量。参照 `outputs/search-plan.json` 对其他年份和关键词继续采集，或修改 `config.json` 的研究范围。不同查询重复获取的原帖按 ID 去重。
 
+需要使用 Clash 时，可通过 `--proxy-server` 为本次采集浏览器单独指定代理。当前宿主机实测的 Clash 混合端口为 `7897`；其他设备请以 Clash 中显示的实际端口为准。例如：
+
+```powershell
+.\.venv\Scripts\python.exe run.py collect-browser --platform x --query '秋招' --start 2025-08-01 --end 2025-11-18 --limit 100 --timeout 180 --proxy-server http://127.0.0.1:7897
+```
+
+这个参数只影响本次采集进程。登录窗口如果也需要同一路径，可用 `python.exe -m playwright open --proxy-server http://127.0.0.1:7897 --user-data-dir data/browser-profiles/x https://x.com`。
+
 获得具有历史搜索权限的 X 官方凭据后，也可以使用 API 路径。`X_BEARER_TOKEN` 是 X 开发者凭据，与下一节的 sub2api 密钥分别配置：
 
 ```powershell
