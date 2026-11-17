@@ -11,8 +11,11 @@ import json
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit, urlunsplit
 
+from .anxiety import load_scores, score_for_post, summarize_scores
+
 
 DATASETS = {
+    "combined": ("全平台合并集", "combined"),
     "balanced": ("按年配额样本", ""),
     "xiaohongshu-available": ("小红书可用补充集", "xiaohongshu-available"),
     "additional-chinese": ("国内平台补充集", "additional-chinese"),
@@ -107,6 +110,7 @@ def load_dashboard(config: dict, dataset: str = "balanced") -> dict:
     if not isinstance(groups, list) or not all(isinstance(g, dict) for g in groups):
         raise DashboardError("统计导出格式无效，请重新执行 export。", 503)
     summary["groups"] = [{key: group[key] for key in GROUP_FIELDS if key in group} for group in groups]
+    anxiety_results, anxiety_duplicates, anxiety_unreadable, anxiety_changed = load_scores(export_root)
     posts = []
     try:
         with sample_file.open(encoding="utf-8-sig") as handle:
@@ -121,6 +125,7 @@ def load_dashboard(config: dict, dataset: str = "balanced") -> dict:
                 analysis = original.get("analysis")
                 post["analysis"] = ({key: analysis[key] for key in ANALYSIS_FIELDS if key in analysis}
                                     if isinstance(analysis, dict) else None)
+                post["anxiety"] = score_for_post(post, anxiety_results, anxiety_duplicates, anxiety_unreadable)
                 posts.append(post)
     except FileNotFoundError:
         raise DashboardError("尚无可用样本，请先执行 export。", 404) from None
@@ -138,7 +143,8 @@ def load_dashboard(config: dict, dataset: str = "balanced") -> dict:
         folder = export_root / suffix
         if (folder / "summary.json").is_file() and (folder / "sample.jsonl").is_file():
             available.append({"id": name, "label": label})
-    changed = max(path.stat().st_mtime for path in (summary_file, sample_file, quality_path) if path.is_file())
+    summary["anxiety"] = summarize_scores(posts)
+    changed = max(path.stat().st_mtime for path in (summary_file, sample_file, quality_path, *anxiety_changed) if path.is_file())
     years = sorted({group["season_year"] for group in groups if isinstance(group.get("season_year"), int)})
     platforms = {group.get("platform") for group in groups}
     return {"dataset": dataset, "summary": summary, "posts": posts, "quality": quality,

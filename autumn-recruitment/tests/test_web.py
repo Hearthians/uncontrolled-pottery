@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import copy
 from contextlib import redirect_stdout
+import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import tempfile
 from threading import Thread
@@ -66,6 +68,22 @@ class DashboardTests(unittest.TestCase):
         with urlopen(self.origin + path, timeout=2) as response:
             return response, response.read().decode("utf-8")
 
+    def score_row(self, **changes):
+        row = {"record_id": "xiaohongshu:note", "text_sha256": hashlib.sha256(self.post["text"].encode()).hexdigest(),
+               "status": "scored", "score": 0.7, "assessable": True, "evidence": ["焦虑"],
+               "reason": "作者明确表达面试焦虑", "confidence": 0.95,
+               "model": "gpt-6.1-sol", "prompt_version": "anxiety-intensity-v1",
+               "raw_response": "hidden-marker", "request_path": "hidden-marker"}
+        row.update(changes)
+        return row
+
+    def write_scores(self, rows):
+        folder = self.root / "outputs/combined/anxiety-v1"
+        folder.mkdir(parents=True, exist_ok=True)
+        file = folder / "scores.jsonl"
+        file.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
+        return file
+
     def test_dashboard_preserves_counts_and_strips_private_fields(self):
         response, text = self.get("/api/dashboard")
         data = json.loads(text)
@@ -81,6 +99,128 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(len(data["meta"]["available_datasets"]), 2)
         self.assertEqual(data["meta"]["platforms"], [{"id": "xiaohongshu", "label": "小红书"}])
         self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertEqual(data["posts"][0]["anxiety"]["status"], "pending")
+        self.assertEqual(data["summary"]["anxiety"], {"total": 1, "scored": 0, "unassessable": 0, "pending": 1, "error": 0})
+
+    def test_anxiety_score_is_bound_to_text_and_exposes_display_fields_only(self):
+        self.write_scores([self.score_row()])
+        _, text = self.get("/api/dashboard")
+        data = json.loads(text)
+        score = data["posts"][0]["anxiety"]
+        self.assertEqual(score, {"status": "scored", "score": 0.7, "evidence": ["焦虑"],
+                                "reason": "作者明确表达面试焦虑", "confidence": 0.95,
+                                "model": "gpt-6.1-sol", "prompt_version": "anxiety-intensity-v1"})
+        self.assertEqual(data["summary"]["anxiety"]["scored"], 1)
+        self.assertNotIn("hidden-marker", text)
+        self.assertNotIn("text_sha256", score)
+
+    def test_anxiety_zero_and_unassessable_are_different(self):
+        for row in (self.score_row(score=0, evidence=[]),
+                    self.score_row(status="unassessable", score=None, assessable=False, evidence=[], reason="语境不足")):
+            with self.subTest(status=row["status"]):
+                self.write_scores([row])
+                _, text = self.get("/api/dashboard")
+                data = json.loads(text)
+                self.assertEqual(data["posts"][0]["anxiety"]["status"], row["status"])
+                self.assertEqual(data["posts"][0]["anxiety"]["score"], row["score"])
+                self.assertEqual(data["summary"]["anxiety"][row["status"]], 1)
+                self.assertEqual(data["summary"]["anxiety"]["pending"], 0)
+
+    def test_anxiety_changed_text_or_old_prompt_stays_pending(self):
+        for changes in ({"text_sha256": "0" * 64}, {"prompt_version": "old-version"}):
+            with self.subTest(changes=changes):
+                self.write_scores([self.score_row(**changes)])
+                _, text = self.get("/api/dashboard")
+                score = json.loads(text)["posts"][0]["anxiety"]
+                self.assertEqual(score["status"], "pending")
+                self.assertIsNone(score["score"])
+
+    def test_anxiety_rejects_invalid_values_and_unsupported_evidence(self):
+        invalid = ({"score": True}, {"score": float("nan")}, {"score": float("inf")}, {"score": 1.01},
+                   {"confidence": True}, {"assessable": False}, {"evidence": []},
+                   {"evidence": ["invented quote"]}, {"status": "unknown"}, {"reason": ""})
+        for changes in invalid:
+            with self.subTest(changes=changes):
+                self.write_scores([self.score_row(**changes)])
+                _, text = self.get("/api/dashboard")
+                score = json.loads(text)["posts"][0]["anxiety"]
+                self.assertEqual(score["status"], "error")
+                self.assertIsNone(score["score"])
+                self.assertNotIn("hidden-marker", text)
+
+    def test_anxiety_explicit_errors_do_not_expose_runner_details(self):
+        self.write_scores([self.score_row(status="error", score=None, assessable=False,
+                                         evidence=[], reason="hidden-marker /private/path/API key")])
+        _, text = self.get("/api/dashboard")
+        data = json.loads(text)
+        self.assertEqual(data["posts"][0]["anxiety"]["status"], "error")
+        self.assertEqual(data["summary"]["anxiety"]["error"], 1)
+        self.assertNotIn("hidden-marker", text)
+        self.assertNotIn("/private/path", text)
+
+    def test_unassessable_result_requires_an_explicit_null_score(self):
+        row = self.score_row(status="unassessable", score=None, assessable=False, evidence=[])
+        del row["score"]
+        self.write_scores([row])
+        response, text = self.get("/api/dashboard")
+        self.assertEqual(response.status, 200)
+        self.assertEqual(json.loads(text)["posts"][0]["anxiety"]["status"], "error")
+
+    def test_duplicate_anxiety_ids_are_invalid_and_other_ids_do_not_match(self):
+        for rows, expected in (([self.score_row(), self.score_row(score=.2)], "error"),
+                               ([self.score_row(record_id="nowcoder:note")], "pending")):
+            with self.subTest(expected=expected):
+                self.write_scores(rows)
+                _, text = self.get("/api/dashboard")
+                self.assertEqual(json.loads(text)["posts"][0]["anxiety"]["status"], expected)
+
+    def test_invalid_anxiety_file_keeps_original_dashboard_readable(self):
+        file = self.write_scores([])
+        for content in ("not-json hidden-marker\n", "[]\n", '{"score": 0.9}\n'):
+            with self.subTest(content=content):
+                file.write_text(content, encoding="utf-8")
+                response, text = self.get("/api/dashboard")
+                data = json.loads(text)
+                self.assertEqual(response.status, 200)
+                self.assertEqual(data["posts"][0]["text"], self.post["text"])
+                self.assertEqual(data["posts"][0]["anxiety"]["status"], "error")
+                self.assertNotIn("hidden-marker", text)
+
+    def test_combined_dataset_reuses_scores_and_preserves_default_api(self):
+        combined = copy.deepcopy(self.summary)
+        combined.update(study_scope="combined_employment", sampling_mode="merged", study_name="全平台合并集")
+        self.write_export(self.root / "outputs/combined", combined, self.post)
+        self.write_scores([self.score_row()])
+        _, text = self.get("/api/dashboard?dataset=combined")
+        data = json.loads(text)
+        self.assertEqual(data["dataset"], "combined")
+        self.assertEqual(data["summary"]["sampling_mode"], "merged")
+        self.assertEqual(data["posts"][0]["anxiety"]["score"], .7)
+        self.assertEqual({item["id"] for item in data["meta"]["available_datasets"]},
+                         {"combined", "balanced", "xiaohongshu-available"})
+        _, default = self.get("/api/dashboard")
+        self.assertEqual(json.loads(default)["dataset"], "balanced")
+        self.assertEqual(json.loads(default)["posts"][0]["anxiety"], data["posts"][0]["anxiety"])
+
+    def test_anxiety_summary_counts_each_state_and_includes_score_update_time(self):
+        posts = []
+        scores = []
+        for index, status in enumerate(("scored", "unassessable", "error", "pending")):
+            post = copy.deepcopy(self.post)
+            post["post_id"] = str(index)
+            post["analysis"]["id"] = f"xiaohongshu:{index}"
+            posts.append(post)
+            if status != "pending":
+                scores.append(self.score_row(record_id=post["analysis"]["id"], status=status,
+                                             score=0 if status == "scored" else None,
+                                             assessable=status == "scored", evidence=[]))
+        (self.root / "outputs/sample.jsonl").write_text("".join(json.dumps(post, ensure_ascii=False) + "\n" for post in posts), encoding="utf-8")
+        file = self.write_scores(scores)
+        os.utime(file, (2_000_000_000, 2_000_000_000))
+        _, text = self.get("/api/dashboard")
+        data = json.loads(text)
+        self.assertEqual(data["summary"]["anxiety"], {"total": 4, "scored": 1, "unassessable": 1, "pending": 1, "error": 1})
+        self.assertTrue(data["meta"]["updated_at"].startswith("2033-"))
 
     def test_dataset_selection_is_explicit_and_unknown_rejected(self):
         _, text = self.get("/api/dashboard?dataset=xiaohongshu-available")
@@ -128,7 +268,7 @@ class DashboardTests(unittest.TestCase):
     def test_static_allowlist_and_head_health(self):
         _, text = self.get("/")
         self.assertIn("<title>秋招", text)
-        for path in ("/config.json", "/data/study.sqlite3", "/../config.json", "/%2e%2e/config.json", "/outputs/sample.jsonl", "/web/../config.json"):
+        for path in ("/config.json", "/data/study.sqlite3", "/../config.json", "/%2e%2e/config.json", "/outputs/sample.jsonl", "/outputs/combined/anxiety-v1/scores.jsonl", "/web/../config.json"):
             with self.subTest(path=path), self.assertRaises(HTTPError) as failure:
                 self.get(path)
             self.assertEqual(failure.exception.code, 404)

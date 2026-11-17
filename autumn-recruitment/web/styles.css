@@ -134,7 +134,8 @@ button svg {
 .nav-links {
   display:flex;
   flex-direction:column;
-  gap:9px
+  gap:9px;
+  margin-top:38px
 }
 .nav-links a {
   display:flex;
@@ -185,10 +186,10 @@ button svg {
   margin:11px 0 0 13px
 }
 .sidebar-footer {
-  font-size:8px;
+  font-size:11px;
   letter-spacing:1px;
-  color:#a6afb0;
-  padding:21px 10px 0
+  color:#8b9c9c;
+  padding:18px 10px 0
 }
 .sidebar-footer span {
   display:block;
@@ -228,7 +229,7 @@ main {
   justify-content:space-between;
   align-items:center;
   gap:20px;
-  padding:34px 0 29px
+  padding:25px 0 22px
 }
 .eyebrow {
   font-size:9px;
@@ -243,7 +244,7 @@ h1,h2,h3,p {
 h1 {
   font-size:31px;
   letter-spacing:.4px;
-  margin-bottom:11px;
+  margin-bottom:0;
   font-weight:700;
   line-height:1.3
 }
@@ -302,76 +303,40 @@ h1 span {
   font-size:20px;
   line-height:12px
 }
+.filter-panel {
+  padding:10px 16px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:9px;
+  margin-bottom:14px
+}
 .filter-bar {
   display:flex;
-  gap:18px;
+  gap:12px;
   align-items:center;
-  padding:13px 18px;
-  border:1px solid var(--line);
-  background:var(--surface);
-  border-radius:10px;
-  box-shadow:var(--shadow);
+  padding:0 0 9px;
+  border-bottom:1px solid #f0f3f2;
   flex-wrap:wrap
 }
-.dataset-switcher {
-  margin-bottom:12px
-}
-.dataset-switcher-heading {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin:0 1px 9px;
-  font-size:11px;
-  color:var(--muted)
-}
-.dataset-switcher-heading>span:last-child {
-  font-size:9px;
-  color:#98a5a5
-}
-#datasets {
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px
-}
-#datasets button {
-  min-width:0;
-  min-height:68px;
-  padding:13px 15px;
-  text-align:left;
+.sample-mode-button {
   border:1px solid var(--line);
-  border-radius:9px;
-  background:var(--surface);
-  color:#687d7f;
-  box-shadow:var(--shadow);
-  transition:background .15s,border-color .15s
+  background:#f7faf9;
+  color:#627a76;
+  border-radius:6px;
+  padding:6px 9px;
+  min-height:32px;
+  font-size:11px;
+  white-space:nowrap
 }
-#datasets button:hover:not(:disabled) {
-  background:#f3f8f6;
-  border-color:#c6dcd5
+.sample-mode-button:hover {
+  border-color:#bfd7cf;
+  color:var(--teal)
 }
-#datasets button.active,#datasets button[aria-pressed="true"] {
-  color:var(--teal);
+.sample-mode-button.active {
+  border-color:#bfd7cf;
   background:var(--teal-soft);
-  border-color:#88b9ae
-}
-.dataset-option-label,.dataset-option-detail {
-  display:block;
-  overflow-wrap:anywhere
-}
-.dataset-option-label {
-  font-size:12px;
-  font-weight:600;
-  line-height:1.5
-}
-.dataset-option-detail {
-  margin-top:4px;
-  color:#8a9b9b;
-  font-size:9px;
-  line-height:1.5
-}
-#datasets button.active .dataset-option-detail,#datasets button[aria-pressed="true"] .dataset-option-detail {
-  color:#60887d
+  color:var(--teal);
+  font-weight:650
 }
 select {
   border:1px solid #e3e9e8;
@@ -389,6 +354,7 @@ select {
   align-items:center
 }
 #platforms {
+  flex:1 1 auto;
   flex-wrap:wrap;
   min-width:0;
   max-width:100%
@@ -396,7 +362,7 @@ select {
 .segmented button {
   border:0;
   background:transparent;
-  font-size:11px;
+  font-size:12px;
   color:#839093;
   padding:8px 12px;
   border-radius:6px;
@@ -413,7 +379,7 @@ select {
 }
 .window-label {
   margin-left:auto;
-  font-size:10px;
+  font-size:11px;
   color:#627a79;
   white-space:nowrap;
   letter-spacing:.3px
@@ -425,27 +391,27 @@ select {
 .year-filter {
   display:flex;
   align-items:center;
-  gap:18px;
-  margin:18px 1px 20px;
-  font-size:11px;
+  gap:12px;
+  padding-top:9px;
+  font-size:12px;
   color:#8c999c
 }
 .year-filter>div {
   display:flex;
-  gap:7px;
+  min-width:0;
+  gap:3px;
   flex-wrap:wrap
 }
 .year-filter button[data-year] {
   background:transparent;
-  border:1px solid transparent;
-  padding:6px 13px;
+  border:0;
+  padding:6px 10px;
   border-radius:5px;
   color:#8b999d;
-  font-size:11px
+  font-size:12px
 }
 .year-filter button.active {
-  background:#fff;
-  border-color:#dce7e3;
+  background:var(--teal-soft);
   color:var(--teal);
   font-weight:600
 }
@@ -453,50 +419,35 @@ select {
   border:0;
   background:transparent;
   color:#859895;
-  font-size:10px;
+  font-size:11px;
   padding:6px
 }
 .year-filter>.text-button {
-  margin-left:auto
+  margin-left:auto;
+  flex-shrink:0;
+  white-space:nowrap
 }
 .context-note {
-  border:1px solid #eae7dd;
-  background:#fcfbf6;
-  display:flex;
-  gap:11px;
-  padding:13px 16px;
-  align-items:center;
-  border-radius:8px;
-  margin-bottom:23px;
-  font-size:10px;
-  color:#99917e;
+  margin-bottom:14px;
+  font-size:12px;
+  color:var(--muted);
   line-height:1.7
 }
-.note-icon {
-  border:1px solid #c4b68e;
-  border-radius:50%;
-  height:15px;
-  width:15px;
-  display:inline-grid;
-  place-items:center;
-  flex-shrink:0;
-  font-family:Georgia,serif;
-  font-weight:bold;
-  color:#a59369;
-  font-size:10px
+.context-note summary {
+  width:fit-content;
+  cursor:pointer;
+  color:#718583;
+  font-size:11px
 }
-.context-note strong {
-  font-weight:600;
-  color:#887b5c;
-  margin-right:14px
+.context-note-body {
+  padding:8px 0 2px;
+  max-width:900px
+}
+.context-note-body p {
+  margin-bottom:5px
 }
 .context-note a {
-  white-space:nowrap;
-  margin-left:auto;
-  color:#a08d62
-}
-.context-note a span {
-  margin-left:7px
+  color:var(--teal)
 }
 .metrics {
   display:grid;
@@ -1418,9 +1369,6 @@ body.is-loading #refresh {
   .detail-grid {
     gap:15px
   }
-  .window-label {
-    display:none
-  }
   .filter-bar {
     gap:12px
   }
@@ -1448,16 +1396,6 @@ body.is-loading #refresh {
   }
   .coverage-platform {
     font-size:9px
-  }
-  .context-note strong {
-    display:block;
-    margin-bottom:2px
-  }
-  .context-note {
-    align-items:flex-start
-  }
-  .context-note a {
-    padding-top:3px
   }
   .panel-kicker {
     font-size:6px
@@ -1502,9 +1440,6 @@ body.is-loading #refresh {
   .overview-grid {
     grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr)
   }
-  #datasets {
-    grid-template-columns:repeat(2,minmax(0,1fr))
-  }
   .segmented button {
     padding-left:9px;
     padding-right:9px
@@ -1522,9 +1457,6 @@ body.is-loading #refresh {
   }
   .metric-value {
     font-size:29px
-  }
-  .context-note {
-    font-size:9px
   }
   .metrics {
     gap:10px
@@ -1557,14 +1489,14 @@ body.is-loading #refresh {
     padding:0 18px
   }
   .topbar {
-    height:51px;
-    font-size:9px
+    height:48px;
+    font-size:11px
   }
   .updated-at {
-    font-size:8px
+    font-size:10px
   }
   .page-heading {
-    padding:26px 0 23px;
+    padding:20px 0 18px;
     flex-wrap:wrap
   }
   .eyebrow {
@@ -1584,53 +1516,38 @@ body.is-loading #refresh {
   .intro {
     font-size:11px
   }
+  .filter-panel {
+    padding:10px 12px
+  }
   .filter-bar {
-    padding:10px 12px;
-    gap:10px
-  }
-  .dataset-switcher-heading {
-    font-size:10px
-  }
-  #datasets {
-    gap:8px
-  }
-  #datasets button {
-    padding:11px 12px;
-    min-height:64px
-  }
-  .dataset-option-label {
-    font-size:11px
+    padding:0 0 8px;
+    gap:6px
   }
   .filter-bar .segmented {
     width:100%;
-    justify-content:space-between
+    justify-content:flex-start
   }
   .filter-bar .segmented button {
-    flex:1
+    flex:0 0 auto;
+    font-size:12px;
+    padding:7px 8px
   }
   .year-filter {
-    gap:8px;
-    align-items:flex-start;
-    margin-top:14px;
+    padding-top:8px;
+    gap:6px;
     flex-wrap:wrap
   }
-  .year-filter>span {
-    padding-top:7px;
-    font-size:10px
+  .year-filter>div {
+    flex:1 1 224px;
+    gap:2px
   }
   .year-filter button[data-year] {
-    padding:6px 10px;
-    font-size:10px
+    padding:6px 4px;
+    font-size:11px
   }
   .year-filter>.text-button {
-    display:none
-  }
-  .context-note {
-    padding:11px;
-    gap:8px
-  }
-  .context-note a {
-    display:none
+    padding:6px 0;
+    font-size:11px
   }
   .metrics {
     grid-template-columns:repeat(2,minmax(0,1fr));
@@ -1813,32 +1730,9 @@ body.is-loading #refresh {
   .topbar .updated-at {
     display:none
   }
-  .filter-bar {
-    padding:9px
-  }
-  #datasets {
-    gap:7px
-  }
-  #datasets button {
-    padding:10px
-  }
   .filter-bar .segmented button {
-    font-size:9px;
-    padding:7px 5px
-  }
-  .year-filter {
-    gap:7px
-  }
-  .year-filter>span {
-    width:100%;
-    padding:0
-  }
-  .year-filter>div {
-    gap:2px
-  }
-  .year-filter button[data-year] {
-    padding:6px 8px;
-    font-size:9px
+    font-size:11px;
+    padding:7px 8px
   }
   .metric {
     padding:13px
@@ -1847,7 +1741,7 @@ body.is-loading #refresh {
     font-size:27px
   }
   .metric-label {
-    font-size:9px
+    font-size:11px
   }
   .metric-icon {
     width:21px;
@@ -1855,7 +1749,7 @@ body.is-loading #refresh {
     font-size:15px
   }
   .metric-detail {
-    font-size:8px
+    font-size:10px
   }
   .section-heading>div:first-child {
     gap:6px
@@ -1986,11 +1880,49 @@ body.is-loading #refresh {
     transition:none!important
   }
 }
+
+.anxiety-section {scroll-margin-top:24px}
+.anxiety-intro {font-size:11px;color:#84988d;line-height:1.8;margin:-3px 0 15px}
+.anxiety-controls {display:flex;gap:15px;align-items:center;flex-wrap:wrap;padding:15px 18px;margin-bottom:14px}
+.anxiety-controls label {display:flex;align-items:center;gap:7px;font-size:10px;color:#6d877a;min-width:0}
+.anxiety-controls input,.anxiety-controls select {border:1px solid #dce7e0;border-radius:5px;padding:7px 8px;background:#fff;color:#527565;min-height:33px;max-width:100%;font-size:11px}
+.anxiety-controls input {width:75px;font-variant-numeric:tabular-nums}
+.anxiety-controls .text-button {margin-left:auto;font-size:10px}
+.anxiety-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.anxiety-metrics .metric-value {font-size:28px;font-variant-numeric:tabular-nums}
+.anxiety-charts {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.anxiety-chart {padding:19px 15px 0;min-width:0}
+.anxiety-chart svg {width:100%;height:auto;display:block}
+.anxiety-chart text {font-family:inherit;font-size:12px;fill:#83998b}
+.anxiety-chart [role=button] {cursor:pointer}
+.anxiety-chart [role=button]:hover {opacity:.8}
+.post-anxiety {margin:12px 0;background:#f6f9f6;border:1px solid #e8efe8;border-radius:6px;padding:11px 12px}
+.post-anxiety-label {display:flex;align-items:center;gap:10px;font-size:10px;color:#78917d}
+.post-anxiety-label strong {font-size:14px;color:#477956;font-variant-numeric:tabular-nums;min-width:36px}
+.post-anxiety-label small {font-size:9px;color:#9cad9f;white-space:nowrap}
+.post-anxiety-track {display:block;max-width:240px;min-width:30px;flex:1;height:5px;background:#e4ece2;border-radius:4px;overflow:hidden}
+.post-anxiety-track i {display:block;height:100%;background:#6d9b75;border-radius:4px}
+.post-anxiety:not([data-anxiety-status=scored]) .post-anxiety-label strong {font-size:11px;color:#9b9b85;min-width:48px}
+.anxiety-evidence {margin-top:8px;font-size:10px;line-height:1.8;color:#7e9082}
+.anxiety-evidence summary {cursor:pointer;width:fit-content;color:#6e8d73}
+.anxiety-evidence blockquote {margin:9px 0;padding:0 10px;border-left:2px solid #d4e2d2;white-space:pre-wrap;overflow-wrap:anywhere}
+.anxiety-evidence p {margin:8px 0 0;overflow-wrap:anywhere}
+.anxiety-evidence .anxiety-model {font-size:9px;color:#9aa69a}
+@media(max-width:960px) {
+  .anxiety-controls {gap:10px}
+  .anxiety-controls .text-button {margin-left:0}
+  .anxiety-metrics {gap:10px}
+  .anxiety-metrics .metric-value {font-size:23px}
+}
 @media(max-width:760px) {
-  .year-filter>.text-button {
-    display:block;
-    font-size:9px;
-    padding:6px 2px;
-    white-space:nowrap
-  }
+  .anxiety-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .anxiety-charts {grid-template-columns:1fr;gap:17px}
+  .anxiety-chart text {font-size:16px}
+  .anxiety-controls {padding:13px;gap:12px}
+  .anxiety-controls label {flex:1 1 125px;justify-content:space-between}
+  .anxiety-controls label:nth-child(n+3) {flex-basis:100%}
+  .anxiety-controls select {flex:1;min-width:0}
+  .anxiety-controls .text-button {min-height:32px}
+  .post-anxiety-label {gap:7px}
+  .post-anxiety {padding:10px}
 }

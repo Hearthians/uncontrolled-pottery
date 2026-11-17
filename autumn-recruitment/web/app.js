@@ -11,15 +11,33 @@ const SENTIMENTS = {
   uncertain: {label: "不确定", color: "#c3aa80", background: "#f8f4ea"},
 };
 const EMOTIONS = ["焦虑", "挫败", "愤怒", "失望", "期待", "喜悦", "平静", "不确定", "未明确表达"];
-const state = {data: null, dataset: "balanced", platform: "all", year: "all", unit: "percent", query: "", sentiment: "all", relevance: "relevant", topic: null, emotion: null, page: 1};
+const state = {data: null, dataset: "combined", platform: "all", year: "all", unit: "percent", query: "", sentiment: "all", relevance: "all", topic: null, emotion: null, page: 1, anxietyMin: 0, anxietyMax: 1, anxietyBin: null, anxietyStatus: "all", sort: "time"};
 const PAGE_SIZE = 6;
-const DATASET_DETAILS = {
-  balanced: "微博 · 小红书 · X",
-  "xiaohongshu-available": "保留可用样本，年份不均衡",
-  "additional-chinese": "牛客等国内平台",
-  "overseas-employment": "Hacker News · Workplace · Mastodon",
+const PLATFORM_SOURCES = [
+  {id: "weibo", label: "微博", dataset: "balanced"},
+  {id: "xiaohongshu", label: "小红书", dataset: "balanced"},
+  {id: "x", label: "X / Twitter", dataset: "balanced"},
+  {id: "nowcoder", label: "牛客", dataset: "additional-chinese"},
+  {id: "bilibili", label: "哔哩哔哩", dataset: "additional-chinese"},
+  {id: "zhihu", label: "知乎", dataset: "additional-chinese"},
+  {id: "hackernews", label: "Hacker News", dataset: "overseas-employment"},
+  {id: "workplace", label: "The Workplace", dataset: "overseas-employment"},
+  {id: "mastodon", label: "Mastodon", dataset: "overseas-employment"},
+  {id: "reddit", label: "Reddit", dataset: "overseas-employment"},
+  {id: "bluesky", label: "Bluesky", dataset: "overseas-employment"},
+];
+const COMBINED_PLATFORMS = new Set(["weibo", "xiaohongshu", "nowcoder", "hackernews", "workplace", "mastodon"]);
+const sourceForPlatform = (platform, preferred = state.dataset) => preferred === "combined" && (platform === "all" || COMBINED_PLATFORMS.has(platform)) ? "combined" : platform === "all" ? preferred
+  : platform === "xiaohongshu" && preferred === "xiaohongshu-available" ? preferred
+  : PLATFORM_SOURCES.find((item) => item.id === platform)?.dataset || preferred;
+const navigationFromURL = () => {
+  const query = new URL(window.location.href).searchParams;
+  const requested = query.get("platform");
+  const dataset = query.get("dataset") || "combined";
+  const platform = requested === "all" ? "all" : PLATFORM_SOURCES.some((item) => item.id === requested) ? requested
+    : dataset === "xiaohongshu-available" ? "xiaohongshu" : "all";
+  return {dataset: sourceForPlatform(platform, dataset), platform};
 };
-const datasetFromURL = () => new URL(window.location.href).searchParams.get("dataset") || "balanced";
 let requestController = null;
 let toastTimer;
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -30,11 +48,23 @@ const relevant = (post) => labelled(post) && post.analysis.relevant;
 const list = (value) => Array.isArray(value) ? value : [];
 const years = () => state.data?.meta?.years || [...new Set(list(state.data?.posts).map((p) => p.season_year))].sort();
 const platforms = () => list(state.data?.meta?.platforms);
-const platformName = (id) => platforms().find((platform) => platform.id === id)?.label || id;
+const platformName = (id) => PLATFORM_SOURCES.find((platform) => platform.id === id)?.label || id;
 const defaultPlatform = () => state.dataset === "xiaohongshu-available" ? "xiaohongshu" : "all";
 const isOverseas = () => state.dataset === "overseas-employment" || state.data?.summary?.study_scope === "overseas_employment";
+const isCombined = () => state.dataset === "combined";
+const publicationYear = () => isCombined() || isOverseas();
+const defaultRelevance = () => isCombined() ? "all" : "relevant";
+const ANXIETY_STATUS = {scored: "已评分", unassessable: "无法判断", pending: "待评分", error: "评分失败"};
+const anxietyOf = (post) => {
+  const value = post.anxiety;
+  if (value?.status === "scored" && typeof value.score === "number" && Number.isFinite(value.score) && value.score >= 0 && value.score <= 1) return value;
+  return {status: ["unassessable", "pending", "error"].includes(value?.status) ? value.status : "pending", score: null, evidence: [], reason: value?.reason || "", confidence: typeof value?.confidence === "number" ? value.confidence : null, model: value?.model || "", prompt_version: value?.prompt_version || ""};
+};
+const anxietyNumber = (value) => typeof value === "number" ? value.toFixed(2) : "—";
 const yearLabel = () => state.year === "all" ? "全部年份" : `${state.year} 年`;
-const platformLabel = () => state.platform === "all" ? "全部平台" : platformName(state.platform);
+const platformLabel = () => state.platform === "all"
+  ? state.data?.meta?.available_datasets?.find((item) => item.id === state.dataset)?.label || "汇总"
+  : platformName(state.platform);
 const scope = (includeYear = true) => state.data.posts.filter((p) => (state.platform === "all" || p.platform === state.platform) && (!includeYear || state.year === "all" || p.season_year === state.year));
 const relatedInYear = (year) => scope(false).filter((p) => p.season_year === year && relevant(p));
 const countTags = (posts, field) => posts.reduce((counts, post) => {
@@ -65,11 +95,38 @@ function notify(message) {
   toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2800);
 }
 
-async function loadData(dataset = state.dataset, historyMode = "replace") {
+function renderPlatformNavigation() {
+  $("platforms").innerHTML = `<button type="button" data-platform="all" aria-pressed="false" title="查看当前样本范围汇总">汇总</button>${PLATFORM_SOURCES.map((platform) => `<button type="button" data-platform="${platform.id}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
+}
+
+function renderSampleMode() {
+  const mode = $("xhs-sample-mode"), balanced = state.dataset === "balanced";
+  mode.hidden = state.platform !== "xiaohongshu";
+  mode.textContent = "按年样本";
+  mode.classList.toggle("active", balanced);
+  mode.setAttribute("aria-pressed", String(balanced));
+  mode.title = balanced ? "切换至完整可用样本" : "切换至按年配额样本";
+}
+
+function updateNavigationURL(historyMode = "replace") {
+  if (historyMode === "none") return;
+  const url = new URL(window.location.href);
+  if (state.dataset === "combined") url.searchParams.delete("dataset");
+  else url.searchParams.set("dataset", state.dataset);
+  if (state.platform === "all" && state.dataset !== "xiaohongshu-available") url.searchParams.delete("platform");
+  else url.searchParams.set("platform", state.platform);
+  if (historyMode === "push" && url.href !== window.location.href) window.history.pushState(null, "", url);
+  else window.history.replaceState(null, "", url);
+}
+
+async function loadData(dataset = state.dataset, historyMode = "replace", platform = state.platform) {
   requestController?.abort();
   const controller = new AbortController();
   requestController = controller;
+  const datasetChanged = dataset !== state.dataset;
   state.dataset = dataset;
+  if (datasetChanged) Object.assign(state, {relevance: defaultRelevance(), anxietyMin: 0, anxietyMax: 1, anxietyBin: null, anxietyStatus: "all", sort: "time"});
+  state.platform = platform;
   state.data = null;
   $("download").disabled = true;
   $("error").hidden = true;
@@ -77,7 +134,8 @@ async function loadData(dataset = state.dataset, historyMode = "replace") {
   $("dashboard").hidden = true;
   document.body.classList.add("is-loading");
   $("main").setAttribute("aria-busy", "true");
-  updatePressed("datasets", "data-dataset", state.dataset);
+  updatePressed("platforms", "data-platform", state.platform);
+  renderSampleMode();
   try {
     const response = await fetch(`/api/dashboard?dataset=${encodeURIComponent(state.dataset)}`, {signal: controller.signal, cache: "no-store"});
     const data = await response.json();
@@ -89,35 +147,27 @@ async function loadData(dataset = state.dataset, historyMode = "replace") {
     state.page = 1;
     state.topic = null;
     state.emotion = null;
-    const available = list(data.meta.available_datasets);
-    $("datasets").innerHTML = available.map((item) => `<button type="button" class="dataset-option${item.id === state.dataset ? " active" : ""}" data-dataset="${escapeHTML(item.id)}" aria-pressed="${item.id === state.dataset}"><span class="dataset-option-label">${escapeHTML(item.label)}</span><span class="dataset-option-detail">${escapeHTML(DATASET_DETAILS[item.id] || "独立数据范围")}</span></button>`).join("");
-    if (historyMode !== "none") {
-      const url = new URL(window.location.href);
-      if (state.dataset === "balanced") url.searchParams.delete("dataset");
-      else url.searchParams.set("dataset", state.dataset);
-      if (historyMode === "push" && url.href !== window.location.href) window.history.pushState(null, "", url);
-      else window.history.replaceState(null, "", url);
-    }
-    if (state.dataset === "xiaohongshu-available" || !platforms().some((platform) => platform.id === state.platform)) state.platform = defaultPlatform();
-    $("platforms").innerHTML = `<button data-platform="all" aria-pressed="false" ${state.dataset === "xiaohongshu-available" ? "disabled" : ""}>全部平台</button>${platforms().map((platform) => `<button data-platform="${escapeHTML(platform.id)}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
+    if (state.platform !== "all" && !platforms().some((item) => item.id === state.platform)) state.platform = defaultPlatform();
     if (state.year !== "all" && !years().includes(state.year)) state.year = "all";
     $("years").innerHTML = `<button data-year="all" aria-pressed="false">全部年份</button>${years().map((year) => `<button data-year="${year}" aria-pressed="false">${year}</button>`).join("")}`;
     $("updated-at").textContent = `数据更新于 ${dateLabel(data.meta.updated_at, true)}`;
     $("footer-updated").textContent = `数据快照 · ${dateLabel(data.meta.updated_at, true)}`;
     $("limitations").innerHTML = list(data.summary.limitations).map((item) => `<li>${escapeHTML(item)}</li>`).join("");
     $("model-note").textContent = `自动标注模型：${data.summary.model} · 提示版本：${data.summary.prompt_version} · 原文依据经逐字校验，未全量人工复核。`;
-    const annualYears = years(), heading = isOverseas() ? "海外就业里的声音" : "秋招里的声音";
-    $("study-scope").textContent = isOverseas() ? "海外英文就业讨论" : "秋季校园招聘";
+    const annualYears = years(), heading = isCombined() ? "就业讨论里的焦虑" : isOverseas() ? "海外就业里的声音" : "秋招里的声音";
+    $("study-scope").textContent = isCombined() ? "全平台就业讨论 · 合并去重" : isOverseas() ? "海外英文就业讨论" : "秋季校园招聘";
     $("page-title").innerHTML = `${heading}<span>${annualYears.length ? `${annualYears[0]}—${annualYears.at(-1)}` : "暂无年份"}</span>`;
     $("page-intro").textContent = data.summary.description || (isOverseas() ? "独立观察英文就业讨论，保留来源语境与英文原文。" : "从真实讨论出发，观察不同年份的话题与情绪。");
-    document.title = `${isOverseas() ? "海外就业观察" : "秋招观察"} · 年度话题与情绪`;
+    document.title = `${isCombined() ? "就业讨论观察" : isOverseas() ? "海外就业观察" : "秋招观察"} · 焦虑程度与年度话题`;
     const studyDates = studyWindow();
     $("window-label").innerHTML = `${studyDates.short} <span>· 北京时间</span>`;
-    $("method-scope").textContent = isOverseas()
+    $("method-scope").textContent = isCombined()
+      ? `按原始发表时间划分发表年份，窗口为北京时间 ${studyDates.long}。六个平台已按帖子 ID 合并去重，保留来源、内容类型和原文语言。`
+      : isOverseas()
       ? `按原始发表时间划分年份，窗口为北京时间 ${studyDates.long}。这是独立的英文就业讨论样本，包含原帖、评论、问题与回答，不代表中国秋季校园招聘。`
       : `按原始发表时间划分秋招年份，窗口为北京时间 ${studyDates.long}。主样本与小红书补充集有重叠；国内补充来源单独展示，各范围不相加。`;
     $("dashboard").hidden = false;
-    render();
+    render(historyMode);
   } catch (error) {
     if (error.name === "AbortError") return;
     $("error").textContent = `${error.message} 可点击“刷新数据”重试。`;
@@ -139,9 +189,11 @@ function updatePressed(container, attribute, value) {
   }
 }
 
-function render() {
+function render(historyMode = "replace") {
   if (!state.data) return;
   hideTooltip();
+  updateNavigationURL(historyMode);
+  renderSampleMode();
   updatePressed("platforms", "data-platform", state.platform);
   updatePressed("years", "data-year", state.year);
   updatePressed("units", "data-unit", state.unit);
@@ -167,7 +219,12 @@ function render() {
   const contextPrefix = context.length ? `${context.join("；")}。` : "";
   const largest = [...groups].sort((a, b) => b.selected - a.selected)[0];
   const latestYear = years().at(-1);
-  if (state.dataset === "balanced") {
+  if (isCombined()) {
+    $("context-title").textContent = "全平台合并集 · 同帖去重";
+    $("context-text").textContent = `${state.data.summary.selected} 条记录来自六个平台，原帖、评论、问题与回答按原始发表时间归年。相同帖子仅计一次，原有相关性和分类标签均保留。`;
+    $("coverage-note").textContent = "显示各平台各发表年份实际收录条数，不套用原始样本的年度配额。";
+    $("method-specific").textContent = "合并集包含中文校园求职与海外一般就业讨论，保留平台和内容语境；当前图表描述已收录记录，不能代表整个就业市场。";
+  } else if (state.dataset === "balanced") {
     $("context-title").textContent = "先看样本，再看变化";
     $("context-text").textContent = `${contextPrefix}图表描述已采讨论，不能代表整个市场。`;
     $("coverage-note").textContent = `数量达到配额，也不等于相关讨论已足额。空缺年份保留缺口${latestYear ? `，${latestYear} 年为阶段样本` : ""}。`;
@@ -190,11 +247,14 @@ function render() {
     $("method-specific").textContent = "国内补充来源采用独立数据范围，平台的用户群体与内容形式不同。年份和平台差异可能来自可见性与采集方式，不能据此推断整体秋招市场。";
   }
   const targets = [...new Set(groups.map((group) => group.target).filter((target) => Number.isFinite(target) && target > 0))];
-  $("coverage-target").textContent = targets.length === 1 ? `每年 ${targets[0]} 条 / 平台` : "配额按分组显示";
+  $("coverage-target").textContent = isCombined() ? "实际收录条数" : targets.length === 1 ? `每年 ${targets[0]} 条 / 平台` : "配额按分组显示";
+  $("coverage-subtitle").textContent = isCombined() ? "按平台与发表年份统计，点击可筛选" : "候选条数 / 原定配额，点击可筛选";
+  $("coverage-key").innerHTML = isCombined() ? `<span><i class="key-dot complete"></i>已有样本</span><span><i class="key-dot empty"></i>尚无样本</span>` : `<span><i class="key-dot complete"></i>配额已满</span><span><i class="key-dot partial"></i>存在缺口</span><span><i class="key-dot empty"></i>尚无样本</span>`;
   renderAnnual();
   renderCoverage();
   renderTopics(related);
   renderEmotions();
+  renderAnxiety();
   renderPosts();
 }
 
@@ -242,9 +302,10 @@ function renderCoverage() {
     for (const year of years()) {
       const group = state.data.summary.groups.find((g) => g.platform === platform && g.season_year === year);
       const count = group?.selected || 0, target = group?.target || 40;
-      const status = !count ? "empty" : count >= target ? "complete" : "partial";
+      const status = !count ? "empty" : isCombined() || count >= target ? "complete" : "partial";
       const selected = state.platform === platform && state.year === year;
-      content += `<button class="coverage-cell ${status}${selected ? " selected" : ""}" data-coverage-platform="${escapeHTML(platform)}" data-coverage-year="${year}" aria-label="${escapeHTML(label)} ${year}年，${count}条候选，原定${target}条${!count ? "，无样本" : ""}" data-tooltip="${escapeHTML(`${label} · ${year}|候选 ${count} / 原定 ${target} 条|模型判相关 ${group?.relevant || 0} 条`)}"><strong>${count ? number(count) : "—"}</strong><small>${count ? `/ ${target}` : "无样本"}</small></button>`;
+      const coverageDescription = isCombined() ? `实际收录 ${count} 条` : `候选 ${count} / 原定 ${target} 条`;
+      content += `<button class="coverage-cell ${status}${selected ? " selected" : ""}" data-coverage-platform="${escapeHTML(platform)}" data-coverage-year="${year}" aria-label="${escapeHTML(label)} ${year}年，${coverageDescription}${!count ? "，无样本" : ""}" data-tooltip="${escapeHTML(`${label} · ${year}|${coverageDescription}|模型判相关 ${group?.relevant || 0} 条`)}"><strong>${count ? number(count) : "—"}</strong><small>${count ? isCombined() ? "条" : `/ ${target}` : "无样本"}</small></button>`;
     }
   }
   $("coverage").innerHTML = content;
@@ -285,7 +346,7 @@ function renderEmotions() {
   $("emotion-chart").innerHTML = html + "</div>";
 }
 
-function matchingPosts() {
+function filteredPosts() {
   let posts = scope();
   if (state.relevance === "relevant") posts = posts.filter(relevant);
   if (state.relevance === "review") posts = posts.filter((p) => !labelled(p) || p.analysis.confidence < .7 || p.analysis.sentiment === "uncertain");
@@ -293,8 +354,90 @@ function matchingPosts() {
   if (state.topic) posts = posts.filter((p) => list(p.analysis?.topics).includes(state.topic));
   if (state.emotion) posts = posts.filter((p) => labelled(p) && (state.emotion === "未明确表达" ? !list(p.analysis.emotions).length : list(p.analysis.emotions).includes(state.emotion)));
   const query = state.query.trim().toLocaleLowerCase();
-  if (query) posts = posts.filter((p) => `${p.text} ${list(p.analysis?.evidence).join(" ")}`.toLocaleLowerCase().includes(query));
-  return posts.sort((a, b) => b.published_at.localeCompare(a.published_at) || a.post_id.localeCompare(b.post_id));
+  if (query) posts = posts.filter((p) => `${p.text} ${list(p.analysis?.evidence).join(" ")} ${list(anxietyOf(p).evidence).join(" ")}`.toLocaleLowerCase().includes(query));
+  if (state.anxietyStatus !== "all") posts = posts.filter((p) => anxietyOf(p).status === state.anxietyStatus);
+  if (state.anxietyMin > 0 || state.anxietyMax < 1 || state.anxietyBin !== null) posts = posts.filter((p) => {
+    const anxiety = anxietyOf(p);
+    return anxiety.status === "scored" && anxiety.score >= state.anxietyMin && (state.anxietyBin !== null && state.anxietyBin < 9 ? anxiety.score < state.anxietyMax : anxiety.score <= state.anxietyMax);
+  });
+  return posts;
+}
+
+function matchingPosts() {
+  return filteredPosts().sort((a, b) => {
+    if (state.sort !== "time") {
+      const first = anxietyOf(a), second = anxietyOf(b);
+      if (first.status === "scored" && second.status !== "scored") return -1;
+      if (second.status === "scored" && first.status !== "scored") return 1;
+      if (first.status === "scored" && second.status === "scored" && first.score !== second.score) return (first.score - second.score) * (state.sort === "anxiety-desc" ? -1 : 1);
+    }
+    return b.published_at.localeCompare(a.published_at) || String(a.post_id).localeCompare(String(b.post_id));
+  });
+}
+
+function renderAnxiety() {
+  const posts = filteredPosts(), scored = posts.map(anxietyOf).filter((value) => value.status === "scored");
+  const scores = scored.map((value) => value.score).sort((a, b) => a - b);
+  const count = (status) => posts.filter((post) => anxietyOf(post).status === status).length;
+  const unknown = count("unassessable"), pending = count("pending"), failed = count("error");
+  const middle = Math.floor(scores.length / 2);
+  const median = scores.length ? scores.length % 2 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2 : null;
+  $("anxiety-scope").textContent = `${platformLabel()} · ${yearLabel()} · 当前筛选`;
+  $("anxiety-progress").textContent = `${scores.length + unknown} / ${posts.length}`;
+  $("anxiety-progress-detail").textContent = `已评分 ${scores.length} 条，无法判断 ${unknown} 条`;
+  $("anxiety-mean").textContent = anxietyNumber(scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null);
+  $("anxiety-median").textContent = anxietyNumber(median);
+  $("anxiety-denominator").textContent = `分母：${scores.length} 条有效评分，含零分`;
+  $("anxiety-unknown").textContent = number(unknown);
+  $("anxiety-pending").textContent = `待评分 ${pending} 条，失败 ${failed} 条`;
+  $("anxiety-min").value = state.anxietyMin;
+  $("anxiety-max").value = state.anxietyMax;
+  $("anxiety-status").value = state.anxietyStatus;
+  $("post-sort").value = state.sort;
+  const bins = Array(10).fill(0);
+  for (const score of scores) bins[Math.min(9, Math.floor(score * 10))]++;
+  const width = 600, height = 235, left = 40, right = 580, top = 26, bottom = 190;
+  const maximum = Math.max(1, ...bins), plotHeight = bottom - top, step = (right - left) / 10;
+  let histogram = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="当前筛选中${scores.length}条有效评分的焦虑程度分布">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = bottom - plotHeight * i / 4;
+    histogram += `<line x1="${left}" x2="${right}" y1="${y}" y2="${y}" stroke="#e8efeb"/><text x="${left - 8}" y="${y + 4}" text-anchor="end">${Number((maximum * i / 4).toFixed(1))}</text>`;
+  }
+  bins.forEach((n, i) => {
+    const x = left + i * step + 5, h = n / maximum * plotHeight, label = `${(i / 10).toFixed(1)}–${((i + 1) / 10).toFixed(1)}${i < 9 ? "（不含右端）" : "（含1）"}`;
+    histogram += `<g role="button" tabindex="0" data-anxiety-bin="${i}" aria-label="焦虑${label}，${n}条，点击筛选" data-tooltip="${escapeHTML(`焦虑 ${label}|${n} 条|分母：${scores.length} 条有效评分`)}"><rect class="anxiety-bin-hit" x="${left + i * step}" y="${top}" width="${step}" height="${bottom - top}" fill="transparent"/><rect x="${x}" y="${bottom - h}" width="${step - 10}" height="${h}" rx="3" fill="${state.anxietyBin === i ? "#17766b" : "#86b29e"}"/><text x="${x + (step - 10) / 2}" y="${bottom - h - 5}" text-anchor="middle">${n || ""}</text></g>`;
+  });
+  for (let i = 0; i <= 10; i += 2) histogram += `<text x="${left + i * step}" y="${bottom + 22}" text-anchor="middle">${(i / 10).toFixed(1)}</text>`;
+  if (!scores.length) histogram += `<text x="${width / 2}" y="${top + 55}" text-anchor="middle">当前筛选没有有效评分</text>`;
+  $("anxiety-histogram").innerHTML = histogram + "</svg>";
+  const series = years().map((year) => {
+    const values = posts.filter((post) => post.season_year === year).map(anxietyOf).filter((value) => value.status === "scored").map((value) => value.score);
+    return {year, n: values.length, mean: values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null};
+  });
+  const yearStep = (right - left) / Math.max(series.length, 1);
+  let annual = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="当前筛选各发表年份的平均焦虑程度，固定0到1尺度">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = bottom - plotHeight * i / 4;
+    annual += `<line x1="${left}" x2="${right}" y1="${y}" y2="${y}" stroke="#e8efeb"/><text x="${left - 8}" y="${y + 4}" text-anchor="end">${(i / 4).toFixed(2)}</text>`;
+  }
+  let previous = null;
+  series.forEach((entry, i) => {
+    const x = left + yearStep * (i + .5), y = entry.mean === null ? null : bottom - entry.mean * plotHeight;
+    if (previous && y !== null) annual += `<line x1="${previous.x}" y1="${previous.y}" x2="${x}" y2="${y}" stroke="#86b29e" stroke-width="2"/>`;
+    if (y !== null) {
+      annual += `<g tabindex="0" role="button" data-anxiety-year="${entry.year}" aria-label="${entry.year}年，平均焦虑${entry.mean.toFixed(2)}，${entry.n}条有效评分" data-tooltip="${escapeHTML(`${entry.year} 年|平均焦虑 ${entry.mean.toFixed(2)}|分母：${entry.n} 条有效评分`)}"><circle cx="${x}" cy="${y}" r="15" fill="transparent"/><circle cx="${x}" cy="${y}" r="5" fill="#17766b"/><text x="${x}" y="${y - 14}" text-anchor="middle">${entry.mean.toFixed(2)}</text><text x="${x}" y="${bottom + 17}" text-anchor="middle">${entry.year}</text><text x="${x}" y="${bottom + 34}" text-anchor="middle">n=${entry.n}</text></g>`;
+      previous = {x, y};
+    } else {
+      annual += `<text x="${x}" y="${bottom - 15}" text-anchor="middle">无有效评分</text><text x="${x}" y="${bottom + 17}" text-anchor="middle">${entry.year}</text><text x="${x}" y="${bottom + 34}" text-anchor="middle">n=0</text>`;
+      previous = null;
+    }
+  });
+  $("anxiety-annual").innerHTML = annual + "</svg>";
+}
+
+function anxietyCard(post) {
+  const anxiety = anxietyOf(post), scored = anxiety.status === "scored";
+  return `<div class="post-anxiety" data-anxiety-status="${anxiety.status}"><div class="post-anxiety-label"><span>焦虑程度</span><strong>${scored ? anxiety.score.toFixed(2) : ANXIETY_STATUS[anxiety.status]}</strong><span class="post-anxiety-track" aria-hidden="true">${scored ? `<i style="width:${anxiety.score * 100}%"></i>` : ""}</span><small>${scored ? "0–1" : "未计入均值"}</small></div>${anxiety.reason || list(anxiety.evidence).length ? `<details class="anxiety-evidence"><summary>查看评分依据与说明</summary>${list(anxiety.evidence).map((quote) => `<blockquote>${escapeHTML(quote)}</blockquote>`).join("")}${anxiety.reason ? `<p>${escapeHTML(anxiety.reason)}</p>` : ""}<p class="anxiety-model">${escapeHTML(anxiety.model || "")}${anxiety.prompt_version ? ` · ${escapeHTML(anxiety.prompt_version)}` : ""}${typeof anxiety.confidence === "number" ? ` · 模型自评可判读程度 ${Math.round(anxiety.confidence * 100)}%` : ""}</p></details>` : ""}</div>`;
 }
 
 function renderPosts() {
@@ -306,6 +449,7 @@ function renderPosts() {
   const chips = [];
   if (state.topic) chips.push(`<button class="filter-tag" data-clear="topic">话题 · ${escapeHTML(state.topic)}<span>×</span></button>`);
   if (state.emotion) chips.push(`<button class="filter-tag" data-clear="emotion">情绪 · ${escapeHTML(state.emotion)}<span>×</span></button>`);
+  if (state.anxietyMin > 0 || state.anxietyMax < 1 || state.anxietyBin !== null) chips.push(`<button class="filter-tag" data-anxiety-reset="true">焦虑 · ${state.anxietyMin.toFixed(2)}–${state.anxietyMax.toFixed(2)}${state.anxietyBin !== null && state.anxietyBin < 9 ? "（不含右端）" : ""}<span>×</span></button>`);
   $("active-tags").innerHTML = chips.join("");
   $("active-tags").hidden = !chips.length;
   const pagePosts = posts.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
@@ -315,8 +459,8 @@ function renderPosts() {
     const label = sentiment?.label || (labelled(post) ? "不相关" : "待标注");
     const statusStyle = `color:${sentiment?.color || "#9ba9a3"};background:${sentiment?.background || "#f3f6f4"}`;
     const symbol = PLATFORM_SYMBOLS[post.platform] || platformName(post.platform).slice(0, 1);
-    const metadata = [dateLabel(post.published_at), `${post.season_year} ${isOverseas() ? "年" : "秋招"}`, entryLabel(post), languageLabel(post.language), regionLabel(post.market_region)].filter(Boolean).join(" · ");
-    return `<article class="post-card" data-entry-type="${escapeHTML(post.entry_type || "post")}"><div class="post-header"><span class="platform-badge ${escapeHTML(post.platform)}"><i>${escapeHTML(symbol)}</i>${escapeHTML(platformName(post.platform))}</span><span class="post-date">${escapeHTML(metadata)}</span><span class="post-sentiment" style="${statusStyle}">${label}</span>${analysis ? `<span class="post-confidence">置信度 ${Math.round(analysis.confidence * 100)}%</span>` : ""}</div><p class="post-body" id="post-body-${index}" lang="${escapeHTML(post.language || (isOverseas() ? "en" : "zh-CN"))}">${escapeHTML(post.text)}</p><button class="expand-button" data-expand="post-body-${index}" aria-expanded="false">展开全文 ↓</button>${analysis && list(analysis.evidence).length ? `<p class="post-evidence" title="${escapeHTML(analysis.evidence.join(" / "))}"><span>标注依据</span>${escapeHTML(analysis.evidence.map((s) => `「${s}」`).join(" · "))}</p>` : ""}<div class="post-bottom">${list(analysis?.topics).map((topic) => `<button class="post-tag" data-topic="${escapeHTML(topic)}">${escapeHTML(topic)}</button>`).join("")}${list(analysis?.emotions).map((emotion) => `<button class="post-tag emotion" data-emotion="${escapeHTML(emotion)}">${escapeHTML(emotion)}</button>`).join("")}${post.url ? `<a class="source-link" href="${escapeHTML(post.url)}" target="_blank" rel="noopener noreferrer">${["post", "story"].includes(post.entry_type || "post") ? "查看原帖" : "查看原文"} ↗</a>` : ""}</div></article>`;
+    const metadata = [dateLabel(post.published_at), `${post.season_year} ${publicationYear() ? "年" : "秋招"}`, entryLabel(post), languageLabel(post.language), regionLabel(post.market_region)].filter(Boolean).join(" · ");
+    return `<article class="post-card" data-entry-type="${escapeHTML(post.entry_type || "post")}"><div class="post-header"><span class="platform-badge ${escapeHTML(post.platform)}"><i>${escapeHTML(symbol)}</i>${escapeHTML(platformName(post.platform))}</span><span class="post-date">${escapeHTML(metadata)}</span><span class="post-sentiment" style="${statusStyle}">${label}</span>${analysis ? `<span class="post-confidence">原标签置信度 ${Math.round(analysis.confidence * 100)}%</span>` : ""}</div><p class="post-body" id="post-body-${index}" lang="${escapeHTML(post.language || (isOverseas() ? "en" : "zh-CN"))}">${escapeHTML(post.text)}</p><button class="expand-button" data-expand="post-body-${index}" aria-expanded="false">展开全文 ↓</button>${analysis && list(analysis.evidence).length ? `<p class="post-evidence" title="${escapeHTML(analysis.evidence.join(" / "))}"><span>标注依据</span>${escapeHTML(analysis.evidence.map((s) => `「${s}」`).join(" · "))}</p>` : ""}${anxietyCard(post)}<div class="post-bottom">${list(analysis?.topics).map((topic) => `<button class="post-tag" data-topic="${escapeHTML(topic)}">${escapeHTML(topic)}</button>`).join("")}${list(analysis?.emotions).map((emotion) => `<button class="post-tag emotion" data-emotion="${escapeHTML(emotion)}">${escapeHTML(emotion)}</button>`).join("")}${post.url ? `<a class="source-link" href="${escapeHTML(post.url)}" target="_blank" rel="noopener noreferrer">${["post", "story"].includes(post.entry_type || "post") ? "查看原帖" : "查看原文"} ↗</a>` : ""}</div></article>`;
   }).join("") : `<div class="empty-state"><span class="empty-icon">◌</span><strong>${scope().length ? "没有匹配的讨论" : "这个范围还没有样本"}</strong>${scope().length ? "试试其他关键词，或清除话题、情绪筛选。" : "已保留真实缺口，可切换年份或平台查看已有数据。"}</div>`;
   $("pagination-info").textContent = posts.length ? `显示 ${(state.page - 1) * PAGE_SIZE + 1}—${Math.min(state.page * PAGE_SIZE, posts.length)} 条，共 ${posts.length} 条` : "0 条匹配结果";
   $("page-number").textContent = `${state.page} / ${pages}`;
@@ -329,11 +473,13 @@ function changeScope(platform, year) {
   if (platform !== undefined) state.platform = platform;
   if (year !== undefined) state.year = year;
   state.page = 1;
-  render();
+  const dataset = platform === undefined ? state.dataset : sourceForPlatform(state.platform, "combined");
+  if (dataset !== state.dataset || !state.data) return loadData(dataset, "push", state.platform);
+  render(platform !== undefined ? "push" : "replace");
 }
 
 function resetFilters() {
-  Object.assign(state, {platform: defaultPlatform(), year: "all", query: "", sentiment: "all", relevance: "relevant", topic: null, emotion: null, page: 1});
+  Object.assign(state, {platform: defaultPlatform(), year: "all", query: "", sentiment: "all", relevance: defaultRelevance(), topic: null, emotion: null, page: 1, anxietyMin: 0, anxietyMax: 1, anxietyBin: null, anxietyStatus: "all", sort: "time"});
   $("search").value = "";
   render();
 }
@@ -342,18 +488,18 @@ function downloadCSV() {
   if (!state.data || state.data.dataset !== state.dataset || document.body.classList.contains("is-loading")) return;
   const posts = matchingPosts();
   if (!posts.length) return;
-  const columns = ["平台", isOverseas() ? "发表年份" : "秋招年份", "发表时间", "正文", "相关性", "话题", "情感", "情绪", "置信度", "依据", "原文链接", "内容类型", "语言", "市场范围", "主题ID", "父级ID"];
+  const columns = ["平台", publicationYear() ? "发表年份" : "秋招年份", "发表时间", "正文", "相关性", "话题", "情感", "情绪", "置信度", "依据", "原文链接", "内容类型", "语言", "市场范围", "主题ID", "父级ID", "焦虑程度", "焦虑评分状态", "焦虑评分依据", "焦虑评分说明", "焦虑评分模型", "焦虑评分版本", "焦虑评分可判读程度"];
   const cell = (value) => {
     let text = String(value ?? "");
     if (/^[\s]*[=+@-]/u.test(text)) text = "'" + text;
     return `"${text.replace(/"/g, '""')}"`;
   };
-  const rows = posts.map((p) => [platformName(p.platform), p.season_year, p.published_at, p.text, labelled(p) ? p.analysis.relevant ? "相关" : "不相关" : "待标注", list(p.analysis?.topics).join("；"), SENTIMENTS[p.analysis?.sentiment]?.label || "", list(p.analysis?.emotions).join("；"), p.analysis?.confidence, list(p.analysis?.evidence).join("；"), p.url, entryLabel(p), languageLabel(p.language), regionLabel(p.market_region), p.thread_id, p.parent_id]);
+  const rows = posts.map((p) => [platformName(p.platform), p.season_year, p.published_at, p.text, labelled(p) ? p.analysis.relevant ? "相关" : "不相关" : "待标注", list(p.analysis?.topics).join("；"), SENTIMENTS[p.analysis?.sentiment]?.label || "", list(p.analysis?.emotions).join("；"), p.analysis?.confidence, list(p.analysis?.evidence).join("；"), p.url, entryLabel(p), languageLabel(p.language), regionLabel(p.market_region), p.thread_id, p.parent_id, anxietyOf(p).score, ANXIETY_STATUS[anxietyOf(p).status], list(anxietyOf(p).evidence).join("；"), anxietyOf(p).reason, anxietyOf(p).model, anxietyOf(p).prompt_version, anxietyOf(p).confidence]);
   const csv = "\ufeff" + [columns, ...rows].map((row) => row.map(cell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${isOverseas() ? "海外就业讨论" : "秋招讨论"}_${state.dataset}_${state.platform}_${state.year}_${posts.length}条.csv`;
+  anchor.download = `${isCombined() ? "全平台就业讨论" : isOverseas() ? "海外就业讨论" : "秋招讨论"}_${state.dataset}_${state.platform}_${state.year}_${posts.length}条.csv`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
@@ -375,19 +521,44 @@ function showTooltip(target, event) {
 function hideTooltip() { $("chart-tooltip").hidden = true; }
 
 $("refresh").addEventListener("click", () => loadData());
+$("xhs-sample-mode").addEventListener("click", () => loadData(state.dataset === "balanced" ? "combined" : "balanced", "push", "xiaohongshu"));
 $("reset").addEventListener("click", resetFilters);
 $("download").addEventListener("click", downloadCSV);
-$("search").addEventListener("input", (event) => { state.query = event.target.value; state.page = 1; renderPosts(); });
-$("sentiment-filter").addEventListener("change", (event) => { state.sentiment = event.target.value; state.page = 1; renderPosts(); });
-$("relevance-filter").addEventListener("change", (event) => { state.relevance = event.target.value; state.page = 1; renderPosts(); });
+const renderFiltered = () => { if (state.data) { renderAnxiety(); renderPosts(); } };
+$("search").addEventListener("input", (event) => { state.query = event.target.value; state.page = 1; renderFiltered(); });
+$("sentiment-filter").addEventListener("change", (event) => { state.sentiment = event.target.value; state.page = 1; renderFiltered(); });
+$("relevance-filter").addEventListener("change", (event) => { state.relevance = event.target.value; state.page = 1; renderFiltered(); });
+$("anxiety-status").addEventListener("change", (event) => { state.anxietyStatus = event.target.value; state.page = 1; renderFiltered(); });
+$("post-sort").addEventListener("change", (event) => { state.sort = event.target.value; state.page = 1; renderPosts(); });
+for (const [id, key] of [["anxiety-min", "anxietyMin"], ["anxiety-max", "anxietyMax"]]) $(id).addEventListener("change", (event) => {
+  const value = Number(event.target.value);
+  state[key] = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : key === "anxietyMin" ? 0 : 1;
+  if (state.anxietyMin > state.anxietyMax) state[key === "anxietyMin" ? "anxietyMax" : "anxietyMin"] = state[key];
+  state.anxietyBin = null;
+  state.page = 1;
+  renderFiltered();
+});
+function clearAnxietyFilters() {
+  Object.assign(state, {anxietyMin: 0, anxietyMax: 1, anxietyBin: null, anxietyStatus: "all", page: 1});
+  renderFiltered();
+}
+$("anxiety-clear").addEventListener("click", clearAnxietyFilters);
 for (const [id, delta] of [["previous", -1], ["next", 1]]) $(id).addEventListener("click", () => { state.page += delta; renderPosts(); $("voices").scrollIntoView({behavior: "smooth", block: "start"}); });
 
 document.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-dataset], [data-platform], [data-year], [data-unit], [data-coverage-platform], [data-chart-year], [data-topic], [data-emotion], [data-clear], [data-expand]");
+  const target = event.target.closest("[data-platform], [data-year], [data-unit], [data-coverage-platform], [data-chart-year], [data-topic], [data-emotion], [data-clear], [data-expand], [data-anxiety-bin], [data-anxiety-year], [data-anxiety-reset]");
   if (!target || target.disabled) return;
-  if (target.dataset.dataset !== undefined) return loadData(target.dataset.dataset, "push");
-  if (!state.data) return;
   if (target.dataset.platform !== undefined) return changeScope(target.dataset.platform);
+  if (!state.data) return;
+  if (target.dataset.anxietyReset) return clearAnxietyFilters();
+  if (target.dataset.anxietyBin !== undefined) {
+    const bin = Number(target.dataset.anxietyBin);
+    Object.assign(state, {anxietyMin: bin / 10, anxietyMax: (bin + 1) / 10, anxietyBin: bin, anxietyStatus: "scored", page: 1});
+    renderFiltered();
+    $("voices").scrollIntoView({behavior: "smooth", block: "start"});
+    return;
+  }
+  if (target.dataset.anxietyYear) return changeScope(undefined, Number(target.dataset.anxietyYear));
   if (target.dataset.year !== undefined) return changeScope(undefined, target.dataset.year === "all" ? "all" : Number(target.dataset.year));
   if (target.dataset.unit) { state.unit = target.dataset.unit; render(); return; }
   if (target.dataset.coveragePlatform) return changeScope(target.dataset.coveragePlatform, Number(target.dataset.coverageYear));
@@ -418,12 +589,21 @@ document.addEventListener("pointerout", (event) => { if (!event.relatedTarget?.c
 document.addEventListener("focusin", (event) => showTooltip(event.target.closest("[data-tooltip]")));
 document.addEventListener("focusout", hideTooltip);
 window.addEventListener("scroll", hideTooltip, {passive: true});
-window.addEventListener("popstate", () => loadData(datasetFromURL(), "none"));
+window.addEventListener("popstate", () => {
+  const navigation = navigationFromURL();
+  if (navigation.dataset !== state.dataset) return loadData(navigation.dataset, "none", navigation.platform);
+  if (navigation.platform === state.platform) return;
+  state.platform = navigation.platform;
+  state.page = 1;
+  render("none");
+});
 
 const navigationObserver = new IntersectionObserver((entries) => {
   const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
   if (visible[0]) for (const link of document.querySelectorAll(".nav-links a")) link.classList.toggle("active", link.hash === `#${visible[0].target.id}`);
 }, {rootMargin: "-5% 0px -65% 0px", threshold: 0});
-for (const id of ["overview", "topics", "voices", "method"]) navigationObserver.observe($(id));
+for (const id of ["overview", "anxiety", "topics", "voices", "method"]) navigationObserver.observe($(id));
 
-loadData(datasetFromURL());
+renderPlatformNavigation();
+const initialNavigation = navigationFromURL();
+loadData(initialNavigation.dataset, "replace", initialNavigation.platform);
