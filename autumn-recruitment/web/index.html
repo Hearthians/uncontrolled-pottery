@@ -34,9 +34,11 @@
       <div class="header-actions"><button id="refresh" class="button button-light"><span aria-hidden="true">↻</span> 刷新数据</button><button id="download" class="button button-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg>导出筛选样本</button></div>
     </header>
 
+    <section class="dataset-switcher" aria-label="数据范围选择">
+      <div class="dataset-switcher-heading"><span>数据范围</span><span>各范围独立查看</span></div>
+      <div id="datasets" role="group" aria-label="数据范围"><button type="button" data-dataset="balanced" class="active" aria-pressed="true"><span class="dataset-option-label">按年配额样本</span><span class="dataset-option-detail">微博 / 小红书 / X</span></button></div>
+    </section>
     <section class="filter-bar" aria-label="图表筛选">
-      <div class="dataset-field"><label for="dataset">数据范围</label><select id="dataset"><option value="balanced">按年配额样本</option></select></div>
-      <div class="filter-divider"></div>
       <div id="platforms" class="segmented" role="group" aria-label="平台"></div>
       <span class="window-label" id="window-label">08.01 — 11.17 <span>· 北京时间</span></span>
     </section>

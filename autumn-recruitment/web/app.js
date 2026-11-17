@@ -13,6 +13,13 @@ const SENTIMENTS = {
 const EMOTIONS = ["焦虑", "挫败", "愤怒", "失望", "期待", "喜悦", "平静", "不确定", "未明确表达"];
 const state = {data: null, dataset: "balanced", platform: "all", year: "all", unit: "percent", query: "", sentiment: "all", relevance: "relevant", topic: null, emotion: null, page: 1};
 const PAGE_SIZE = 6;
+const DATASET_DETAILS = {
+  balanced: "微博 · 小红书 · X",
+  "xiaohongshu-available": "保留可用样本，年份不均衡",
+  "additional-chinese": "牛客等国内平台",
+  "overseas-employment": "Hacker News · Workplace · Mastodon",
+};
+const datasetFromURL = () => new URL(window.location.href).searchParams.get("dataset") || "balanced";
 let requestController = null;
 let toastTimer;
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -58,11 +65,11 @@ function notify(message) {
   toastTimer = setTimeout(() => { $("toast").hidden = true; }, 2800);
 }
 
-async function loadData() {
+async function loadData(dataset = state.dataset, historyMode = "replace") {
   requestController?.abort();
   const controller = new AbortController();
   requestController = controller;
-  state.dataset = $("dataset").value;
+  state.dataset = dataset;
   state.data = null;
   $("download").disabled = true;
   $("error").hidden = true;
@@ -70,20 +77,27 @@ async function loadData() {
   $("dashboard").hidden = true;
   document.body.classList.add("is-loading");
   $("main").setAttribute("aria-busy", "true");
+  updatePressed("datasets", "data-dataset", state.dataset);
   try {
     const response = await fetch(`/api/dashboard?dataset=${encodeURIComponent(state.dataset)}`, {signal: controller.signal, cache: "no-store"});
     const data = await response.json();
+    if (controller !== requestController) return;
     if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "本地数据读取失败，请先完成样本导出。");
     if (!Array.isArray(data.posts) || !Array.isArray(data.summary?.groups)) throw new Error("导出数据格式不完整，请重新导出后刷新。");
     if (data.dataset !== state.dataset) throw new Error("返回的数据范围不匹配，请刷新后重试。");
-    if (controller !== requestController) return;
     state.data = data;
     state.page = 1;
     state.topic = null;
     state.emotion = null;
     const available = list(data.meta.available_datasets);
-    $("dataset").innerHTML = available.map((dataset) => `<option value="${escapeHTML(dataset.id)}">${escapeHTML(dataset.label)}</option>`).join("");
-    $("dataset").value = state.dataset;
+    $("datasets").innerHTML = available.map((item) => `<button type="button" class="dataset-option${item.id === state.dataset ? " active" : ""}" data-dataset="${escapeHTML(item.id)}" aria-pressed="${item.id === state.dataset}"><span class="dataset-option-label">${escapeHTML(item.label)}</span><span class="dataset-option-detail">${escapeHTML(DATASET_DETAILS[item.id] || "独立数据范围")}</span></button>`).join("");
+    if (historyMode !== "none") {
+      const url = new URL(window.location.href);
+      if (state.dataset === "balanced") url.searchParams.delete("dataset");
+      else url.searchParams.set("dataset", state.dataset);
+      if (historyMode === "push" && url.href !== window.location.href) window.history.pushState(null, "", url);
+      else window.history.replaceState(null, "", url);
+    }
     if (state.dataset === "xiaohongshu-available" || !platforms().some((platform) => platform.id === state.platform)) state.platform = defaultPlatform();
     $("platforms").innerHTML = `<button data-platform="all" aria-pressed="false" ${state.dataset === "xiaohongshu-available" ? "disabled" : ""}>全部平台</button>${platforms().map((platform) => `<button data-platform="${escapeHTML(platform.id)}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
     if (state.year !== "all" && !years().includes(state.year)) state.year = "all";
@@ -97,11 +111,11 @@ async function loadData() {
     $("page-title").innerHTML = `${heading}<span>${annualYears.length ? `${annualYears[0]}—${annualYears.at(-1)}` : "暂无年份"}</span>`;
     $("page-intro").textContent = data.summary.description || (isOverseas() ? "独立观察英文就业讨论，保留来源语境与英文原文。" : "从真实讨论出发，观察不同年份的话题与情绪。");
     document.title = `${isOverseas() ? "海外就业观察" : "秋招观察"} · 年度话题与情绪`;
-    const window = studyWindow();
-    $("window-label").innerHTML = `${window.short} <span>· 北京时间</span>`;
+    const studyDates = studyWindow();
+    $("window-label").innerHTML = `${studyDates.short} <span>· 北京时间</span>`;
     $("method-scope").textContent = isOverseas()
-      ? `按原始发表时间划分年份，窗口为北京时间 ${window.long}。这是独立的英文就业讨论样本，包含原帖、评论、问题与回答，不代表中国秋季校园招聘。`
-      : `按原始发表时间划分秋招年份，窗口为北京时间 ${window.long}。主样本与小红书补充集有重叠；国内补充来源单独展示，各范围不相加。`;
+      ? `按原始发表时间划分年份，窗口为北京时间 ${studyDates.long}。这是独立的英文就业讨论样本，包含原帖、评论、问题与回答，不代表中国秋季校园招聘。`
+      : `按原始发表时间划分秋招年份，窗口为北京时间 ${studyDates.long}。主样本与小红书补充集有重叠；国内补充来源单独展示，各范围不相加。`;
     $("dashboard").hidden = false;
     render();
   } catch (error) {
@@ -360,8 +374,7 @@ function showTooltip(target, event) {
 }
 function hideTooltip() { $("chart-tooltip").hidden = true; }
 
-$("dataset").addEventListener("change", loadData);
-$("refresh").addEventListener("click", loadData);
+$("refresh").addEventListener("click", () => loadData());
 $("reset").addEventListener("click", resetFilters);
 $("download").addEventListener("click", downloadCSV);
 $("search").addEventListener("input", (event) => { state.query = event.target.value; state.page = 1; renderPosts(); });
@@ -370,8 +383,10 @@ $("relevance-filter").addEventListener("change", (event) => { state.relevance = 
 for (const [id, delta] of [["previous", -1], ["next", 1]]) $(id).addEventListener("click", () => { state.page += delta; renderPosts(); $("voices").scrollIntoView({behavior: "smooth", block: "start"}); });
 
 document.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-platform], [data-year], [data-unit], [data-coverage-platform], [data-chart-year], [data-topic], [data-emotion], [data-clear], [data-expand]");
-  if (!target || target.disabled || !state.data) return;
+  const target = event.target.closest("[data-dataset], [data-platform], [data-year], [data-unit], [data-coverage-platform], [data-chart-year], [data-topic], [data-emotion], [data-clear], [data-expand]");
+  if (!target || target.disabled) return;
+  if (target.dataset.dataset !== undefined) return loadData(target.dataset.dataset, "push");
+  if (!state.data) return;
   if (target.dataset.platform !== undefined) return changeScope(target.dataset.platform);
   if (target.dataset.year !== undefined) return changeScope(undefined, target.dataset.year === "all" ? "all" : Number(target.dataset.year));
   if (target.dataset.unit) { state.unit = target.dataset.unit; render(); return; }
@@ -403,6 +418,7 @@ document.addEventListener("pointerout", (event) => { if (!event.relatedTarget?.c
 document.addEventListener("focusin", (event) => showTooltip(event.target.closest("[data-tooltip]")));
 document.addEventListener("focusout", hideTooltip);
 window.addEventListener("scroll", hideTooltip, {passive: true});
+window.addEventListener("popstate", () => loadData(datasetFromURL(), "none"));
 
 const navigationObserver = new IntersectionObserver((entries) => {
   const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
@@ -410,4 +426,4 @@ const navigationObserver = new IntersectionObserver((entries) => {
 }, {rootMargin: "-5% 0px -65% 0px", threshold: 0});
 for (const id of ["overview", "topics", "voices", "method"]) navigationObserver.observe($(id));
 
-loadData();
+loadData(datasetFromURL());

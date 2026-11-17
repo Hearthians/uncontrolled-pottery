@@ -313,15 +313,65 @@ h1 span {
   box-shadow:var(--shadow);
   flex-wrap:wrap
 }
-.dataset-field {
+.dataset-switcher {
+  margin-bottom:12px
+}
+.dataset-switcher-heading {
   display:flex;
   align-items:center;
-  gap:12px
-}
-.dataset-field label {
+  justify-content:space-between;
+  gap:12px;
+  margin:0 1px 9px;
   font-size:11px;
-  color:var(--muted);
-  white-space:nowrap
+  color:var(--muted)
+}
+.dataset-switcher-heading>span:last-child {
+  font-size:9px;
+  color:#98a5a5
+}
+#datasets {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px
+}
+#datasets button {
+  min-width:0;
+  min-height:68px;
+  padding:13px 15px;
+  text-align:left;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface);
+  color:#687d7f;
+  box-shadow:var(--shadow);
+  transition:background .15s,border-color .15s
+}
+#datasets button:hover:not(:disabled) {
+  background:#f3f8f6;
+  border-color:#c6dcd5
+}
+#datasets button.active,#datasets button[aria-pressed="true"] {
+  color:var(--teal);
+  background:var(--teal-soft);
+  border-color:#88b9ae
+}
+.dataset-option-label,.dataset-option-detail {
+  display:block;
+  overflow-wrap:anywhere
+}
+.dataset-option-label {
+  font-size:12px;
+  font-weight:600;
+  line-height:1.5
+}
+.dataset-option-detail {
+  margin-top:4px;
+  color:#8a9b9b;
+  font-size:9px;
+  line-height:1.5
+}
+#datasets button.active .dataset-option-detail,#datasets button[aria-pressed="true"] .dataset-option-detail {
+  color:#60887d
 }
 select {
   border:1px solid #e3e9e8;
@@ -332,17 +382,6 @@ select {
   font-size:11px;
   min-height:33px;
   max-width:100%
-}
-.dataset-field select {
-  font-size:12px;
-  border:0;
-  background:#f6f8f8;
-  min-width:174px
-}
-.filter-divider {
-  width:1px;
-  height:24px;
-  background:var(--line)
 }
 .segmented {
   display:flex;
@@ -1463,11 +1502,8 @@ body.is-loading #refresh {
   .overview-grid {
     grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr)
   }
-  .filter-divider {
-    display:none
-  }
-  .dataset-field label {
-    display:none
+  #datasets {
+    grid-template-columns:repeat(2,minmax(0,1fr))
   }
   .segmented button {
     padding-left:9px;
@@ -1552,14 +1588,18 @@ body.is-loading #refresh {
     padding:10px 12px;
     gap:10px
   }
-  .dataset-field {
-    width:100%
+  .dataset-switcher-heading {
+    font-size:10px
   }
-  .dataset-field label {
-    display:block
+  #datasets {
+    gap:8px
   }
-  .dataset-field select {
-    flex:1
+  #datasets button {
+    padding:11px 12px;
+    min-height:64px
+  }
+  .dataset-option-label {
+    font-size:11px
   }
   .filter-bar .segmented {
     width:100%;
@@ -1775,6 +1815,12 @@ body.is-loading #refresh {
   }
   .filter-bar {
     padding:9px
+  }
+  #datasets {
+    gap:7px
+  }
+  #datasets button {
+    padding:10px
   }
   .filter-bar .segmented button {
     font-size:9px;

@@ -30,6 +30,8 @@ $env:PYTHONUTF8 = '1'
 
 另有“国内平台补充集”（`outputs/additional-chinese/`）与“海外英文就业讨论”（`outputs/overseas-employment/`）：牛客入选 141 条、相关 133 条；海外组 409 条、相关 382 条，均已完成标注。海外组包含 Hacker News 200、Workplace 200、Mastodon 9 条，以一般就业讨论独立解读。真实校园网页面已完成 326 项统计、API、交互、CSV 和响应式检查，全部通过。采集结果和续跑命令见 [新增平台采集记录](docs/additional-collection.md)。
 
+数据范围现以四个可见按钮展示。切换会更新地址中的 `dataset`，刷新、分享以及浏览器前进后退均保留对应范围；可直接打开 [国内补充](http://10.7.4.11:8765/?dataset=additional-chinese) 或 [海外就业](http://10.7.4.11:8765/?dataset=overseas-employment)。
+
 图表统计范围由平台和年份控制；阅读区可再按关键词、情感、相关性、话题和情绪筛选。导出按钮包含当前匹配的全部分页结果。完成新的 `export` 后，点击“刷新数据”加载最新导出；只刷新网页不会增加模型调用。
 
 ## 校园网访问
