@@ -2,11 +2,13 @@
 
 部署日期：2026-11-17。宿主机为 `DESKTOP-6285DI7`，通过 WSL 调用 Windows 原生 PowerShell 完成部署。
 
+项目已从原 C 盘目录迁移到 `D:\lizd\work\autumn-recruitment`。迁移前停止项目浏览器并检查数据库，迁移后核验 86 个关键数据与登录文件的 SHA256，全部一致，旧目录已移除；虚拟环境已在 D 盘重建。
+
 ## 已完成
 
-- 部署目录：`C:\Users\lizd\work\autumn-recruitment`；只同步项目源文件，Windows 的运行环境和数据单独保存在该目录内。
+- 部署目录：`D:\lizd\work\autumn-recruitment`；只同步项目源文件，Windows 的运行环境和数据单独保存在该目录内。
 - Windows 原生 Python 3.14.7，项目 `.venv` 已安装 Playwright 1.65.2、greenlet 和 tzdata，项目内 Chromium 已安装。
-- Windows 原生离线测试 33 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
+- Windows 原生离线测试 49 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
 - Windows 原生 `doctor --live` 成功，网关为 `https://api.gfyh.fun/v1`，模型 `gpt-6.1-sol` 可用。
 - 现有 LLM 凭据通过 `\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\` 只读引用，配置路径保存在宿主部署目录的 `data\host-env.ps1`。
 - AdsPower 技能已按用户指定的 `npx skills add ... --skill adspower-browser` 安装在 WSL 用户的 `~/.agents/skills/adspower-browser` 及 Windows 的 `%USERPROFILE%\.agents\skills\adspower-browser`，后续会话可发现该技能；WSL 侧 CLI 已验证可运行，宿主机既有 AdsPower 客户端已启动。
@@ -14,25 +16,29 @@
 
 ## 真实采集结果与当前阻塞
 
-已用 Windows 原生、可见的 Chromium 执行 2025 年秋招关键词搜索，每个平台先请求 3 条原帖以验证入口。**当前有效原帖数量仍为微博 0、小红书 0、X 0。**
+微博、小红书已在项目独立 Chromium 中正常登录，迁移保留了这两个平台的资料。当前状态如下；具体逐年数量以最新 `outputs/summary.json` 为准。
 
-| 平台 / 工具 | 宿主机实测结果 | 继续所需 |
+| 平台 / 工具 | 宿主机实测结果 | 当前限制 |
 | --- | --- | --- |
-| 微博 | 采集器检测到登录要求并停止 | 在 `data/browser-profiles/weibo` 的独立浏览器中正常登录 |
-| 小红书 | 采集器检测到登录要求并停止；本轮未再出现此前 Linux 测试的 IP 风险页 | 在 `data/browser-profiles/xiaohongshu` 中完成正常登录 |
-| X | 通过 Clash 可访问，但搜索跳转 `/i/jf/onboarding/web?...&mode=login`；页面显示“电子邮箱或用户名”，原帖数为 0。采集器已补齐对此登录页的识别 | 在 `data/browser-profiles/x` 中完成正常登录；官方 API 路径另需 X Bearer Token |
-| AdsPower | 客户端已运行，但本地 API `50325` 当前不可访问，相关 API Key 环境变量未配置 | 在客户端确认账号及 Local API 状态，再提供可用的本机 API 接入；可见 Playwright 浏览器可先用于平台登录 |
+| 微博 | 471 条真实原帖；2022—2026 年各选 40 条，共 200 条候选样本 | 月度搜索前部结果集中在每年 8/31、9/30、10/31、11/17 四天，存在排序与日期偏差。200 条候选不等于 200 条经模型确认相关的个人言论 |
+| 小红书 | 已取得 250 条真实原帖；当前入选 68 条，逐年为 3 / 0 / 8 / 17 / 40 | 通过正常 UI“最多点赞”找到部分历史帖；2023 年定向补采进入平台安全限制页（`300013`），已停止，2022—2025 配额仍不足 |
+| X | 通过 Clash 可访问，但搜索进入登录页，当前原帖为 0 | 仍需正常登录独立 X 资料，或配置具备历史检索权限的官方 API 凭据 |
+| AdsPower | 客户端已运行，技能已安装；本地 API `50325` 仍不可访问 | 当前实际采集使用 Playwright 持久浏览器资料；待 Local API 正常后才能连接 AdsPower |
 
-宿主机证据文件位于 `C:\Users\lizd\work\autumn-recruitment\data\diagnostics\`，包括 `host-collector-weibo.json`、`host-collector-xiaohongshu.json`、`host-collector-x.json`、`host-x-browser.json`、`host-collection-attempts.json` 和 `model-doctor.json`。这些文件、浏览器资料及数据均由 Git 忽略。
+已核实微博 2026 年搜索卡片省略的年份：采集器正常打开原帖详情，读取该页面自己的详情响应和原始 `created_at`，按原帖 ID 匹配，不推测年份。小红书读取详情页实际渲染的完整正文与原始 `time`，不把更新时间、搜索关键词或届别当作发表时间。
 
-本轮已为三个平台分别打开并确认可见的持久登录窗口。用户完成登录后需关闭对应窗口，释放资料目录，再继续采集；页面和进程的本机记录见 `data/diagnostics/host-login-windows.json`。
+分析复用既有 sub2api 接入。提示版本为 `recruitment-v2`，排除无个人经历或实质观点的纯招聘、营销及追星内容；标签按模型、提示版本及内容哈希缓存。已清理 132 条微博正文末尾的已确认页面“收起d”按钮文字，原始观察记录保留，受影响标注重新生成。模型证据片段须逐字出现在正文中。3 条明确含窗口后新增内容的小红书历史笔记已从按年比较排除，原始记录保留。
+
+最终主报告为 268 条候选、268 条已标注、212 条模型确认相关。微博 200 条候选中相关 163 条；小红书主样本 68 条中相关 49 条。另提供小红书 207 条可用补充集，全部标注、相关 153 条，位于 `outputs/xiaohongshu-available/`，年份分布 3 / 0 / 8 / 17 / 179；这套补充集与主样本重叠，不能相加计数。
+
+数据库、原始响应、登录资料和诊断保存在本机项目的 `data/`，报告及标签在 `outputs/`，均由 Git 忽略。迁移核验见 `data/diagnostics/directory-migration.json`；清洗记录见 `post-migration-quality.json`，最终数据完整性与标签校验见两套输出中的 `quality-audit.json`。海外平台核验见 [HN / Workplace](docs/overseas-platforms.md) 与 [其他海外社交平台](docs/overseas-social-platforms.md)。
 
 ## 在宿主机继续操作
 
 打开 PowerShell：
 
 ```powershell
-Set-Location C:\Users\lizd\work\autumn-recruitment
+Set-Location D:\lizd\work\autumn-recruitment
 $env:PYTHONUTF8 = '1'
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location).Path 'data\browser-binaries'
 $env:AUTUMN_LLM_CONFIG_FILE = '\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\config.toml'
@@ -42,13 +48,20 @@ $env:AUTUMN_LLM_AUTH_FILE = '\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\auth.
 
 `host-env.ps1` 仅包含项目目录和既有凭据文件的路径；WSL 的 `Ubuntu-24.04` 需要可运行。其他设备可按 [WINDOWS.md](WINDOWS.md) 的环境变量方法配置自己的 sub2api 接入。
 
-完成独立浏览器登录并关闭对应窗口后，再执行采集：
+确认对应资料没有被其他窗口占用后，再执行采集：
 
 ```powershell
 .\.venv\Scripts\python.exe run.py collect-browser --platform xiaohongshu --query '26届 秋招' --start 2025-08-01 --end 2025-11-18 --limit 100 --timeout 180
 .\.venv\Scripts\python.exe run.py collect-browser --platform weibo --query '秋招' --start 2025-08-01 --end 2025-11-18 --limit 100 --timeout 180
 .\.venv\Scripts\python.exe run.py collect-browser --platform x --query '秋招' --start 2025-08-01 --end 2025-11-18 --limit 100 --timeout 180 --proxy-server http://127.0.0.1:7897
 .\.venv\Scripts\python.exe run.py sample
+```
+
+补充集的本机配置为 `data/xiaohongshu-available-config.json`，只启用小红书且设置 `sampling.mode=available`。可续跑：
+
+```powershell
+.\.venv\Scripts\python.exe run.py --config data\xiaohongshu-available-config.json analyze --batch-size 16
+.\.venv\Scripts\python.exe run.py --config data\xiaohongshu-available-config.json export
 ```
 
 完整安装、登录和分析命令见 [WINDOWS.md](WINDOWS.md)。此前 Linux 环境的访问测试见 [BLOCKERS.md](BLOCKERS.md)；当前状态优先参考本记录及宿主机最新诊断。

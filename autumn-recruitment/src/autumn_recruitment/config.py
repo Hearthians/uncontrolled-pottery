@@ -36,6 +36,8 @@ def load_config(path: str | Path | None = None) -> dict:
     if not isinstance(target, int) or isinstance(target, bool) or target < 1:
         raise ValueError("target_per_platform must be a positive integer")
     config["target_per_platform"] = target
+    if config.get("sampling", {}).get("mode", "balanced") not in {"balanced", "available"}:
+        raise ValueError("sampling.mode must be balanced or available")
     ZoneInfo(config.get("timezone", "Asia/Shanghai"))
     window = config.get("window", {})
     for year in years:

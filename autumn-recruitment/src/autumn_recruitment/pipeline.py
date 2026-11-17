@@ -107,6 +107,9 @@ def clean_posts(posts: list[dict], config: dict) -> list[dict]:
         text = original.get("text")
         if platform not in PLATFORMS or not post_id or not isinstance(text, str):
             continue
+        temporal_review = original.get("temporal_review")
+        if isinstance(temporal_review, dict) and temporal_review.get("exclude_from_season") is True:
+            continue
         published = _publication_time(original.get("published_at"), timezone)
         if published is None or published.year not in windows:
             continue
@@ -142,7 +145,7 @@ def clean_posts(posts: list[dict], config: dict) -> list[dict]:
 
 
 def select_sample(posts: list[dict], config: dict) -> list[dict]:
-    """Choose a stable sample with fixed equal quotas per calendar year.
+    """Choose a stable sample, balanced by year unless available mode is explicit.
 
     Missing year quotas stay unfilled, making shortages visible and preserving
     cross-year balance. This function filters again so unvalidated imported posts
@@ -158,7 +161,7 @@ def select_sample(posts: list[dict], config: dict) -> list[dict]:
     maximum = config.get("sampling", {}).get("max_per_author_per_year", 3)
     result = []
     for (platform, year), candidates in sorted(grouped.items()):
-        quota = year_quotas(config)[year]
+        quota = len(candidates) if config.get("sampling", {}).get("mode") == "available" else year_quotas(config)[year]
         candidates.sort(key=lambda post: hashlib.sha256(
             f"{seed}:{platform}:{post['post_id']}".encode("utf-8")).hexdigest())
         authors: Counter = Counter()

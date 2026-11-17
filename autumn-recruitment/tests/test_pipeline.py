@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import sys
 import tempfile
@@ -94,6 +95,13 @@ class PlanningAndSamplingTests(unittest.TestCase):
         self.assertEqual({(item["platform"], item["post_id"]) for item in cleaned},
                          {("weibo", "1"), ("x", "5")})
 
+    def test_verified_later_revision_excluded_without_guessing_from_metadata(self):
+        revised = post("edited", platform="xiaohongshu", temporal_review={
+            "exclude_from_season": True, "reason": "正文含次年新增求职结果", "evidence": "2023年更新"})
+        metadata_only = post("metadata", platform="xiaohongshu", updated_at="2023-01-01T12:00:00+08:00")
+        self.assertEqual([p["post_id"] for p in clean_posts([revised, metadata_only], self.config)], ["metadata"])
+        self.assertIn("temporal_review", revised)
+
     def test_balanced_sample_is_order_independent_and_does_not_fill_shortages(self):
         config = copy.deepcopy(self.config)
         config["years"] = [2022, 2023]
@@ -112,6 +120,16 @@ class PlanningAndSamplingTests(unittest.TestCase):
         config["sampling"]["max_per_author_per_year"] = 2
         sample = select_sample([post(str(index), author_id="same") for index in range(10)], config)
         self.assertEqual(len(sample), 2)
+
+    def test_available_mode_keeps_year_imbalance_and_author_limit_explicit(self):
+        config = copy.deepcopy(self.config)
+        config["years"] = [2022, 2023]
+        config["target_per_platform"] = 2
+        config["sampling"].update(mode="available", max_per_author_per_year=2)
+        items = [post(str(i), 2022, author_id="same") for i in range(4)] + [post("later", 2023)]
+        sample = select_sample(items, config)
+        self.assertEqual(sum(p["season_year"] == 2022 for p in sample), 2)
+        self.assertEqual(sum(p["season_year"] == 2023 for p in sample), 1)
 
 
 class StorageTests(unittest.TestCase):
@@ -148,6 +166,27 @@ class StorageTests(unittest.TestCase):
         self.assertIsNone(self.db.get_analysis("weibo", "1", changed, "model-a", "v1"))
         self.db.save_analysis("weibo", "1", label, "model-a", "v2", digest)
         self.assertEqual(len(self.db.list_analyses()), 2)
+
+    def test_recapture_preserves_temporal_review_without_altering_raw_input(self):
+        review = {"exclude_from_season": True, "evidence": "2023年更新"}
+        self.db.upsert_posts([post(platform="xiaohongshu", temporal_review=review)])
+        recaptured = post(platform="xiaohongshu", raw={"source_field": "recaptured"})
+        self.db.upsert_posts([recaptured])
+        self.assertEqual(self.db.list_posts()[0]["temporal_review"], review)
+        self.assertNotIn("temporal_review", recaptured)
+        self.assertEqual(clean_posts(self.db.list_posts(), load_config()), [])
+        latest_raw = self.db.connection.execute(
+            "SELECT record_json FROM raw_records ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(json.loads(latest_raw["record_json"]), recaptured)
+
+    def test_explicit_temporal_review_can_override_previous_exclusion(self):
+        for replacement in ({"exclude_from_season": False, "reason": "人工复核已解除"}, None):
+            with self.subTest(replacement=replacement):
+                self.db.upsert_posts([post(platform="xiaohongshu", temporal_review={"exclude_from_season": True})])
+                updated = post(platform="xiaohongshu", temporal_review=replacement)
+                self.db.upsert_posts([updated])
+                self.assertEqual(self.db.list_posts()[0]["temporal_review"], replacement)
+                self.assertEqual(len(clean_posts(self.db.list_posts(), load_config())), 1)
 
 
 if __name__ == "__main__":

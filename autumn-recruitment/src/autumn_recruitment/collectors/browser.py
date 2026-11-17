@@ -79,6 +79,8 @@ def extract_posts(platform: str, payload: dict, query: str = "") -> list[dict]:
                 item = post(platform, row.get("idstr") or row.get("id") or row.get("mid"), row.get("text_raw") or row.get("text"), row.get("created_at"), author_id=user.get("idstr") or user.get("id"), likes=row.get("attitudes_count"), comments=row.get("comments_count"), shares=row.get("reposts_count"), raw=row, query=query)
             elif platform == "xiaohongshu":
                 note = row.get("note_card") or row
+                if "desc" not in note:
+                    continue
                 user = note.get("user") or {}
                 metrics = note.get("interact_info") or {}
                 title = note.get("title") or note.get("display_title") or ""
@@ -108,6 +110,22 @@ def _xhs_links(payload: dict) -> list[str]:
     return links
 
 
+def _remember_xhs_link(links: dict[str, str], link: str) -> None:
+    """Prefer the real search-card link over its tokenless SEO alias."""
+    parsed = urlparse(link)
+    if parsed.hostname != "www.xiaohongshu.com":
+        return
+    match = re.fullmatch(r"/(?:explore|search_result)/([a-fA-F0-9]{24})/?", parsed.path)
+    if not match:
+        return
+    identity = match.group(1)
+    previous = links.get(identity)
+    has_token = bool(parse_qs(parsed.query).get("xsec_token"))
+    previous_has_token = bool(previous and parse_qs(urlparse(previous).query).get("xsec_token"))
+    if previous is None or (has_token and not previous_has_token):
+        links[identity] = link
+
+
 def _response_allowed(platform: str, url: str) -> bool:
     parsed = urlparse(url)
     host = parsed.hostname or ""
@@ -121,6 +139,12 @@ def _response_allowed(platform: str, url: str) -> bool:
 def _check_page(page: object) -> None:
     url = page.url.lower()
     parsed = urlparse(url)
+    if (
+        (parsed.hostname == "xiaohongshu.com" or (parsed.hostname or "").endswith(".xiaohongshu.com"))
+        and parsed.path.rstrip("/") == "/website-login/error"
+        and set(parse_qs(parsed.query).get("error_code", [])) & {"300012", "300013"}
+    ):
+        raise CollectorError("小红书出现安全限制；采集已停止，请在正常浏览器中处理")
     if (
         (parsed.hostname == "x.com" or (parsed.hostname or "").endswith(".x.com"))
         and parsed.path.rstrip("/") == "/i/jf/onboarding/web"
@@ -139,13 +163,6 @@ def _check_page(page: object) -> None:
             raise CollectorError("平台要求登录；请先在持久浏览器资料中正常登录后重试")
 
 
-_WEIBO_DOM = """() => Array.from(document.querySelectorAll('.card-wrap[mid]')).map(card => {
-  const content = card.querySelector('[node-type="feed_list_content_full"]') || card.querySelector('[node-type="feed_list_content"]');
-  const date = card.querySelector('.from a');
-  const author = card.querySelector('.info a.name');
-  return {id:card.getAttribute('mid'), text:content?.innerText, date:date?.getAttribute('title') || date?.innerText,
-    url:date?.href || '', author_url:author?.href || ''};
-})"""
 _X_DOM = """() => Array.from(document.querySelectorAll('article[data-testid="tweet"]')).map(card => {
   const date = card.querySelector('time'); const link = date?.closest('a');
   return {url:link?.href || '', date:date?.getAttribute('datetime'), text:card.querySelector('[data-testid="tweetText"]')?.innerText};
@@ -222,8 +239,16 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
     faults: list[str] = []
 
     def remember(item: dict) -> None:
-        if in_window(item, window) and len(unique) < limit:
-            unique.setdefault(item["post_id"], item)
+        if not in_window(item, window):
+            return
+        identity = item["post_id"]
+        if identity in unique:
+            # Detail-page state/full search DOM can complete a previously seen
+            # API excerpt even after the requested number of IDs was reached.
+            if item.get("raw", {}).get("source") in {"authenticated_search_dom", "rendered_note_state"}:
+                unique[identity] = item
+        elif len(unique) < limit:
+            unique[identity] = item
 
     def response_received(response: object) -> None:
         if not _response_allowed(platform, response.url):
@@ -237,11 +262,14 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
             payload = response.json()
         except Exception:
             return
-        for item in extract_posts(platform, payload, query):
-            remember(item)
+        # Search cards can expose a date and an abbreviated description. Only
+        # ordinary detail responses or rendered detail state supply XHS bodies.
+        if platform != "xiaohongshu" or urlparse(response.url).path.endswith("/feed"):
+            for item in extract_posts(platform, payload, query):
+                remember(item)
         if platform == "xiaohongshu" and isinstance(payload, dict):
             for link in _xhs_links(payload):
-                detail_links.setdefault(urlparse(link).path.rsplit("/", 1)[-1], link)
+                _remember_xhs_link(detail_links, link)
 
     deadline = time.monotonic() + timeout_seconds
     try:
@@ -260,23 +288,29 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
                 idle = 0
                 previous_count = (-1, -1)
                 page_number = 1
-                while len(unique) < limit and time.monotonic() < deadline:
+                while time.monotonic() < deadline:
                     _check_page(page)
                     if faults:
                         raise CollectorError(faults[0])
-                    if platform in {"weibo", "x"}:
-                        for row in page.evaluate(_WEIBO_DOM if platform == "weibo" else _X_DOM):
+                    if platform == "weibo":
+                        from .weibo import extract_search_posts
+                        for item in extract_search_posts(page, query, resolve_dates=True, deadline=deadline,
+                                                         max_detail_requests=max(0, limit - len(unique)),
+                                                         check_page=_check_page):
+                            remember(item)
+                    elif platform == "x":
+                        for row in page.evaluate(_X_DOM):
                             try:
-                                identity = row.get("id") if platform == "weibo" else re.search(r"/status/(\d+)", row.get("url", "")).group(1)
+                                identity = re.search(r"/status/(\d+)", row.get("url", "")).group(1)
                                 remember(post(platform, identity, row.get("text"), row.get("date"), url=row.get("url", ""), raw={"source": "visible_search_dom", **row}, query=query))
                             except (ValueError, AttributeError, TypeError, OverflowError):
                                 continue
                     else:
                         for link in page.evaluate(_XHS_LINK_DOM):
-                            parsed = urlparse(link)
-                            if parsed.hostname == "www.xiaohongshu.com":
-                                detail_links.setdefault(parsed.path.rsplit("/", 1)[-1], link)
+                            _remember_xhs_link(detail_links, link)
                     after = (len(unique), len(detail_links))
+                    if len(unique) >= limit:
+                        break
                     idle = idle + 1 if after == previous_count else 0
                     previous_count = after
                     if platform == "xiaohongshu" and (len(detail_links) >= max(limit * 2, 20) or idle >= 3):
@@ -306,6 +340,12 @@ def collect_browser(platform: str, query: str, start: str, end: str, profile_dir
                         _check_page(page)
                         if faults:
                             raise CollectorError(faults[0])
+                        from .xiaohongshu import NOTE_STATE_JS, extract_note_state
+                        note_id = re.search(r"/(?:explore|search_result)/([a-fA-F0-9]{24})(?:/|$)", urlparse(page.url).path)
+                        if note_id:
+                            for item in extract_note_state(page.evaluate(NOTE_STATE_JS), query,
+                                                          expected_note_id=note_id.group(1), source_url=page.url):
+                                remember(item)
             finally:
                 context.close()
     except (CollectorError, KeyboardInterrupt):

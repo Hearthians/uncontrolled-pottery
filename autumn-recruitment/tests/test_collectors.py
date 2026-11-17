@@ -18,6 +18,17 @@ from autumn_recruitment.collectors.normalize import date_window, in_window, time
 
 
 class CollectorTests(unittest.TestCase):
+    def test_xhs_security_error_stops_but_missing_note_is_not_a_security_gate(self):
+        from autumn_recruitment.collectors.browser import _check_page
+        page = MagicMock()
+        for code in ("300012", "300013"):
+            page.url = f"https://www.xiaohongshu.com/website-login/error?error_code={code}"
+            with self.subTest(code=code), self.assertRaisesRegex(CollectorError, "安全限制"):
+                _check_page(page)
+        page.url = "https://www.xiaohongshu.com/website-login/error?error_code=300031"
+        page.locator.return_value.first.is_visible.return_value = False
+        _check_page(page)
+
     def test_dataabc_export_preserves_ids_and_chinese_timezone(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "weibo.csv"
@@ -68,12 +79,47 @@ class CollectorTests(unittest.TestCase):
     def test_xhs_waits_for_detail_timestamp_and_ignores_comment_objects(self):
         summary = {"data": {"items": [{"id": "abc", "note_card": {"display_title": "秋招焦虑"}}], "comments": [{"id": "comment", "content": "不该当成帖子", "time": 1725156000000}]}}
         self.assertEqual(extract_posts("xiaohongshu", summary), [])
+        dated_summary = {"data": {"items": [{"id": "abc", "note_card": {"display_title": "秋招焦虑", "time": 1725156000000}}]}}
+        self.assertEqual(extract_posts("xiaohongshu", dated_summary), [])
         detail = {"data": {"items": [{"id": "abc", "note_card": {"title": "秋招焦虑", "desc": "投了好多简历", "time": 1725156000000, "interact_info": {"liked_count": "1.1万"}, "user": {"user_id": "u1"}}}]}}
         rows = extract_posts("xiaohongshu", detail)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["text"], "秋招焦虑\n投了好多简历")
         self.assertEqual(rows[0]["author_id"], "u1")
         self.assertEqual(rows[0]["likes"], 11000)
+
+    def test_xhs_search_excerpt_does_not_satisfy_limit_before_full_detail(self):
+        identity = "0123456789abcdef01234567"
+        link = f"https://www.xiaohongshu.com/explore/{identity}?xsec_token=browser-issued"
+        callbacks = []
+        context, page = MagicMock(), MagicMock()
+        context.pages = [page]
+        context.on.side_effect = lambda event, callback: callbacks.append(callback)
+        page.locator.return_value.first.is_visible.return_value = False
+        response = MagicMock()
+        response.url = "https://edith.xiaohongshu.com/api/sns/web/v1/search/notes"
+        response.status = 200
+        response.json.return_value = {"data": {"items": [{"id": identity, "xsec_token": "browser-issued", "note_card": {
+            "title": "秋招", "desc": "摘要", "time": 1725156000000}}]}}
+        def navigate(url, **kwargs):
+            page.url = url
+            if "search_result?" in url:
+                callbacks[-1](response)
+        page.goto.side_effect = navigate
+        state = {"noteDetailMap": {identity: {"note": {"noteId": identity, "title": "秋招", "desc": "完整正文与真实求职经历",
+                                                    "time": 1725156000000, "user": {"userId": "author"}}}}}
+        page.evaluate.side_effect = lambda script: [link] if "section.note-item" in script else state
+        runtime, manager = MagicMock(), MagicMock()
+        runtime.chromium.launch_persistent_context.return_value = context
+        manager.__enter__.return_value = runtime
+        sync_module = ModuleType("playwright.sync_api")
+        sync_module.sync_playwright = lambda: manager
+        with tempfile.TemporaryDirectory() as directory, patch.dict(sys.modules, {"playwright": ModuleType("playwright"), "playwright.sync_api": sync_module}):
+            rows = collect_browser("xiaohongshu", "秋招", "2024-09-01", "2024-10-01", Path(directory)/"profile", Path(directory)/"raw.jsonl", limit=1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["text"], "秋招\n完整正文与真实求职经历")
+        self.assertEqual(rows[0]["raw"]["source"], "rendered_note_state")
+        context.close.assert_called_once()
 
     def test_x_search_timeline_does_not_collect_recommended_users(self):
         tweet = {"rest_id": "123", "legacy": {"full_text": "今年秋招压力大", "created_at": "Sun Sep 01 02:00:00 +0000 2024", "user_id_str": "42", "favorite_count": 2}}

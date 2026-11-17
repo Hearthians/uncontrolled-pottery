@@ -99,9 +99,13 @@ class Storage:
                 post.setdefault("collected_at", _now())
                 post["content_hash"] = content_hash(post["text"])
                 existing = self.connection.execute(
-                    "SELECT 1 FROM posts WHERE platform = ? AND post_id = ?",
+                    "SELECT payload_json FROM posts WHERE platform = ? AND post_id = ?",
                     (post["platform"], post["post_id"]),
                 ).fetchone()
+                if existing is not None and "temporal_review" not in post:
+                    previous = json.loads(existing["payload_json"])
+                    if "temporal_review" in previous:
+                        post["temporal_review"] = previous["temporal_review"]
                 self.connection.execute("""
                     INSERT INTO posts(platform, post_id, text, published_at, url, content_hash,
                                       payload_json, first_collected_at, last_collected_at)
