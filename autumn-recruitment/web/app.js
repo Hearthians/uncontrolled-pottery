@@ -14,15 +14,15 @@ const EMOTIONS = ["焦虑", "挫败", "愤怒", "失望", "期待", "喜悦", "�
 const state = {data: null, dataset: "combined", platform: "all", year: "all", unit: "percent", query: "", sentiment: "all", relevance: "all", topic: null, emotion: null, page: 1, anxietyMin: 0, anxietyMax: 1, anxietyBin: null, anxietyStatus: "all", sort: "time"};
 const PAGE_SIZE = 6;
 const PLATFORM_SOURCES = [
-  {id: "weibo", label: "微博", dataset: "balanced"},
   {id: "xiaohongshu", label: "小红书", dataset: "balanced"},
-  {id: "x", label: "X / Twitter", dataset: "balanced"},
-  {id: "nowcoder", label: "牛客", dataset: "additional-chinese"},
-  {id: "bilibili", label: "哔哩哔哩", dataset: "additional-chinese"},
-  {id: "zhihu", label: "知乎", dataset: "additional-chinese"},
+  {id: "weibo", label: "微博", dataset: "balanced"},
   {id: "hackernews", label: "Hacker News", dataset: "overseas-employment"},
   {id: "workplace", label: "The Workplace", dataset: "overseas-employment"},
+  {id: "nowcoder", label: "牛客", dataset: "additional-chinese"},
   {id: "mastodon", label: "Mastodon", dataset: "overseas-employment"},
+  {id: "x", label: "X / Twitter", dataset: "balanced"},
+  {id: "bilibili", label: "哔哩哔哩", dataset: "additional-chinese"},
+  {id: "zhihu", label: "知乎", dataset: "additional-chinese"},
   {id: "reddit", label: "Reddit", dataset: "overseas-employment"},
   {id: "bluesky", label: "Bluesky", dataset: "overseas-employment"},
 ];
@@ -96,7 +96,12 @@ function notify(message) {
 }
 
 function renderPlatformNavigation() {
-  $("platforms").innerHTML = `<button type="button" data-platform="all" aria-pressed="false" title="查看当前样本范围汇总">汇总</button>${PLATFORM_SOURCES.map((platform) => `<button type="button" data-platform="${platform.id}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
+  const counts = {};
+  if (isCombined() && state.data) {
+    for (const post of state.data.posts) counts[post.platform] = (counts[post.platform] || 0) + 1;
+  }
+  const ordered = [...PLATFORM_SOURCES].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+  $("platforms").innerHTML = `<button type="button" data-platform="all" aria-pressed="false" title="查看当前样本范围汇总">汇总</button>${ordered.map((platform) => `<button type="button" data-platform="${platform.id}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
 }
 
 function renderSampleMode() {
@@ -144,6 +149,7 @@ async function loadData(dataset = state.dataset, historyMode = "replace", platfo
     if (!Array.isArray(data.posts) || !Array.isArray(data.summary?.groups)) throw new Error("导出数据格式不完整，请重新导出后刷新。");
     if (data.dataset !== state.dataset) throw new Error("返回的数据范围不匹配，请刷新后重试。");
     state.data = data;
+    if (isCombined()) renderPlatformNavigation();
     state.page = 1;
     state.topic = null;
     state.emotion = null;
