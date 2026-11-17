@@ -35,6 +35,24 @@ $env:PYTHONUTF8 = "1"
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location).Path 'data\browser-binaries'
 ```
 
+## 打开可视化网页
+
+当前宿主机项目位于 `D:\lizd\work\autumn-recruitment`，可双击其中的 `launch-dashboard.cmd` 启动。也可以在 PowerShell 中执行：
+
+```powershell
+Set-Location D:\lizd\work\autumn-recruitment
+$env:PYTHONUTF8 = '1'
+.\.venv\Scripts\python.exe run.py serve --host 127.0.0.1 --port 8765
+```
+
+浏览器打开 <http://127.0.0.1:8765/>。命令行启动时保持窗口运行，按 `Ctrl+C` 停止；若 `8765` 已被其他程序占用，可改用 `--port 8766`，并打开相应地址。默认只监听本机；当前宿主机已按用户授权开放校园网，地址和规则见 [HOST_DEPLOYMENT.md](HOST_DEPLOYMENT.md)。本机存在 `data/dashboard-network.json` 时，双击启动器会沿用其中已配置的监听方式。
+
+可按年份和平台查看情感分布、话题、情绪与样本缺口，切换条数/占比，点击图表下钻到原帖，并按正文、情感、相关性等继续筛选。“导出筛选样本”按钮以 CSV 格式导出当前匹配的全部记录，包含未显示在当前页的结果。
+
+数据范围有两套：`outputs/` 的按年配额主样本，以及 `outputs/xiaohongshu-available/` 的小红书补充集。二者重叠，不能相加计数；补充集年份不均，当前主要来自 2026 年。图表只按已标注且相关的帖子统计情感、话题和情绪，无样本年份保留为空缺。
+
+浏览网页仅需本机已有导出，无需设置 LLM 密钥，也不会重新采集或产生模型调用。重新运行 `export` 后点击页面“刷新数据”即可更新；首次还没有导出时，先按下文完成采集、分析和导出。“查看原帖”使用平台网页，能否读取取决于平台登录与原帖当前状态。
+
 ## 分别登录三个平台
 
 在本项目的独立浏览器资料中手动登录；Windows 平常使用的 Chrome/Edge 登录状态不会自动共享到这些目录。以下命令逐条执行，每次确认登录成功后关闭整个浏览器窗口，再执行下一条：

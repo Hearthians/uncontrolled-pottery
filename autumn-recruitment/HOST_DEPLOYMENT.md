@@ -8,11 +8,35 @@
 
 - 部署目录：`D:\lizd\work\autumn-recruitment`；只同步项目源文件，Windows 的运行环境和数据单独保存在该目录内。
 - Windows 原生 Python 3.14.7，项目 `.venv` 已安装 Playwright 1.65.2、greenlet 和 tzdata，项目内 Chromium 已安装。
-- Windows 原生离线测试 49 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
+- Windows 原生离线测试 55 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
 - Windows 原生 `doctor --live` 成功，网关为 `https://api.gfyh.fun/v1`，模型 `gpt-6.1-sol` 可用。
 - 现有 LLM 凭据通过 `\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\` 只读引用，配置路径保存在宿主部署目录的 `data\host-env.ps1`。
 - AdsPower 技能已按用户指定的 `npx skills add ... --skill adspower-browser` 安装在 WSL 用户的 `~/.agents/skills/adspower-browser` 及 Windows 的 `%USERPROFILE%\.agents\skills\adspower-browser`，后续会话可发现该技能；WSL 侧 CLI 已验证可运行，宿主机既有 AdsPower 客户端已启动。
 - Clash Verge 运行中，混合代理地址 `http://127.0.0.1:7897`；通过该代理的 X 访问测试成功。X 采集器使用明确的进程级代理参数。
+
+## 本地可视化操作
+
+项目已增加本地年度可视化网页，入口为 <http://127.0.0.1:8765/>。在 `D:\lizd\work\autumn-recruitment` 中双击 `launch-dashboard.cmd` 启动，或打开 PowerShell：
+
+```powershell
+Set-Location D:\lizd\work\autumn-recruitment
+$env:PYTHONUTF8 = '1'
+.\.venv\Scripts\python.exe run.py serve --host 127.0.0.1 --port 8765
+```
+
+命令行启动的服务以 `Ctrl+C` 停止，终端关闭后需要重新启动。网页只读现有导出，不依赖模型密钥，不发起采集和 LLM 调用。
+
+页面支持年份/平台切换、条数与占比、年度情感图、话题排名、情绪图、样本覆盖、原帖筛选和当前筛选 CSV 导出。主数据读取 `outputs/`，小红书补充集读取 `outputs/xiaohongshu-available/`；两套结果有重叠，不能相加。补充集偏重 2026 年，小红书历史缺口和 X 的空样本会在界面保留。
+
+图表统计范围由平台和年份控制；阅读区可再按关键词、情感、相关性、话题和情绪筛选。导出按钮包含当前匹配的全部分页结果。完成新的 `export` 后，点击“刷新数据”加载最新导出；只刷新网页不会增加模型调用。
+
+## 校园网访问
+
+按用户授权，当前宿主机已监听 `0.0.0.0:8765`，校园网入口为 <http://10.7.4.11:8765/>；本机入口 <http://127.0.0.1:8765/> 同样可用。Windows 原生与 WSL 到校园网地址的 HTTP 连通验证均成功，其他校园网设备的实际连接还取决于校园网的路由和访问策略。
+
+Windows 防火墙规则 `AutumnRecruitment-Web-8765-Campus` 仅允许以太网接口、本机 `10.7.4.11` 的 TCP `8765`，远端范围为 `10.0.0.0/8`。页面只提供展示字段，浏览器资料、原始响应及密钥文件不在 HTTP 文件目录中。
+
+本机 `data/dashboard-network.json` 保存已授权的网络监听方式，双击启动器会继续使用该设置。IP 变化时需要更新当前地址对应的防火墙规则和分享链接；配置文件、进程记录及网络诊断由 Git 忽略。
 
 ## 真实采集结果与当前阻塞
 

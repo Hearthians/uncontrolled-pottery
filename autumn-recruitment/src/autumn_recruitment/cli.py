@@ -63,6 +63,9 @@ def make_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--limit", type=int, help="本次最多分析多少条新帖子")
     analyze.add_argument("--batch-size", type=int, help="每次模型调用帖子数（1–16）")
     commands.add_parser("export", help="导出当前样本、标注 CSV 和按年统计")
+    web = commands.add_parser("serve", help="启动本地只读可视化网页，不采集或调用模型")
+    web.add_argument("--host", default="127.0.0.1", help="默认仅供本机访问")
+    web.add_argument("--port", type=int, default=8765)
     return parser
 
 
@@ -70,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     args = make_parser().parse_args(argv)
     try:
         config = load_config(args.config)
+        if args.command == "serve":
+            from .web import serve
+            serve(config, args.host, args.port)
+            return 0
         if args.command == "plan":
             jobs = make_plan(config)
             result = {"target_per_platform": config["target_per_platform"], "years": config["years"],
