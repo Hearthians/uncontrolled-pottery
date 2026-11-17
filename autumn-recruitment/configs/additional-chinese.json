@@ -1,0 +1,77 @@
+{
+  "study_name": "国内平台补充样本",
+  "timezone": "Asia/Shanghai",
+  "years": [
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "window": {
+    "start_month": 8,
+    "start_day": 1,
+    "end_month": 11,
+    "end_day": 18
+  },
+  "target_per_platform": 200,
+  "sampling": {
+    "seed": "20261117",
+    "max_per_author_per_year": 3
+  },
+  "platforms": {
+    "nowcoder": {
+      "enabled": true,
+      "queries": [
+        "秋招",
+        "校招 面试",
+        "秋招 offer"
+      ]
+    },
+    "bilibili": {
+      "enabled": true,
+      "queries": [
+        "秋招",
+        "校招 面试",
+        "秋招 offer"
+      ]
+    },
+    "zhihu": {
+      "enabled": true,
+      "queries": [
+        "秋招",
+        "校招 面试",
+        "秋招 offer"
+      ]
+    }
+  },
+  "filters": {
+    "min_text_length": 6,
+    "require_keywords": [
+      "秋招",
+      "校招",
+      "求职",
+      "面试",
+      "offer",
+      "应届",
+      "招聘",
+      "recruitment",
+      "job hunt"
+    ],
+    "exclude_regex": [
+      "(?:付费|收费|有偿).{0,8}(?:内推|保过|代投)",
+      "(?:课程|训练营|辅导).{0,12}(?:报名|购买|领取|限时)",
+      "(?:加|添加)(?:微信|微|[vV][xX]?).{0,8}(?:领取|咨询|资料)"
+    ]
+  },
+  "storage": {
+    "database": "data/additional-study.sqlite3",
+    "raw_dir": "data/raw/additional",
+    "output_dir": "outputs/additional-chinese"
+  },
+  "llm": {
+    "batch_size": 8
+  },
+  "study_scope": "campus_recruitment",
+  "description": "牛客等国内新增来源；按原始发表时间比较校园招聘讨论，未采到的平台保留缺口。"
+}

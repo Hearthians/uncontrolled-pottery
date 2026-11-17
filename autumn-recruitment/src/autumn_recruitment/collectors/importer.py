@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import json
 from pathlib import Path
 from typing import Any
@@ -17,14 +18,15 @@ def normalize_import(row: dict, platform: str) -> dict:
     """Supports canonical records, dataabc CSV exports and common MediaCrawler fields."""
     if not isinstance(row, dict):
         raise ValueError("每条记录必须为 JSON 对象")
+    canonical = row.get("platform") == platform and isinstance(row.get("text"), str)
     text = _first(row, "text", "content", "微博正文", "正文", "full_text", "desc")
     title = _first(row, "title", "display_title", "标题")
-    if title and str(title) not in str(text or ""):
+    if not canonical and title and str(title) not in str(text or ""):
         text = f"{title}\n{text or ''}".strip()
-    return post(
+    result = post(
         platform,
         _first(row, "post_id", "note_id", "tweet_id", "idstr", "微博id", "微博ID", "id", "mid"),
-        text,
+        html.escape(text) if canonical else text,
         _first(row, "published_at", "created_at", "publish_time", "publish_date", "日期", "发布时间", "time"),
         url=str(_first(row, "url", "note_url", "微博url", "微博URL", "链接") or ""),
         author_id=_first(row, "author_id", "user_id", "用户id", "用户ID", "uid"),
@@ -34,6 +36,14 @@ def normalize_import(row: dict, platform: str) -> dict:
         raw=row.get("raw") if isinstance(row.get("raw"), dict) else row,
         query=str(row.get("query") or ""),
     )
+    if canonical:
+        # Canonical text is already plain text. Literal code and entity notation
+        # must survive another import, e.g. C++ <T> or a quoted "&gt;".
+        result["text"] = text.strip()
+    for key in ("entry_type", "thread_id", "parent_id", "language", "market_region", "updated_at", "temporal_review"):
+        if key in row:
+            result[key] = row[key]
+    return result
 
 
 def import_posts(path: str | Path, platform: str) -> list[dict]:

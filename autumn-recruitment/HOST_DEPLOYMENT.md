@@ -8,7 +8,7 @@
 
 - 部署目录：`D:\lizd\work\autumn-recruitment`；只同步项目源文件，Windows 的运行环境和数据单独保存在该目录内。
 - Windows 原生 Python 3.14.7，项目 `.venv` 已安装 Playwright 1.65.2、greenlet 和 tzdata，项目内 Chromium 已安装。
-- Windows 原生离线测试 55 项通过，生成了 45 个分平台、分年份、分关键词查询任务。
+- Windows 原生离线测试 80 项通过；原三平台生成了 45 个分平台、分年份、分关键词查询任务，新增公开来源使用独立采集器和配置。
 - Windows 原生 `doctor --live` 成功，网关为 `https://api.gfyh.fun/v1`，模型 `gpt-6.1-sol` 可用。
 - 现有 LLM 凭据通过 `\\wsl.localhost\Ubuntu-24.04\home\lizd\.codex\` 只读引用，配置路径保存在宿主部署目录的 `data\host-env.ps1`。
 - AdsPower 技能已按用户指定的 `npx skills add ... --skill adspower-browser` 安装在 WSL 用户的 `~/.agents/skills/adspower-browser` 及 Windows 的 `%USERPROFILE%\.agents\skills\adspower-browser`，后续会话可发现该技能；WSL 侧 CLI 已验证可运行，宿主机既有 AdsPower 客户端已启动。
@@ -27,6 +27,8 @@ $env:PYTHONUTF8 = '1'
 命令行启动的服务以 `Ctrl+C` 停止，终端关闭后需要重新启动。网页只读现有导出，不依赖模型密钥，不发起采集和 LLM 调用。
 
 页面支持年份/平台切换、条数与占比、年度情感图、话题排名、情绪图、样本覆盖、原帖筛选和当前筛选 CSV 导出。主数据读取 `outputs/`，小红书补充集读取 `outputs/xiaohongshu-available/`；两套结果有重叠，不能相加。补充集偏重 2026 年，小红书历史缺口和 X 的空样本会在界面保留。
+
+另有“国内平台补充集”（`outputs/additional-chinese/`）与“海外英文就业讨论”（`outputs/overseas-employment/`）：牛客入选 141 条、相关 133 条；海外组 409 条、相关 382 条，均已完成标注。海外组包含 Hacker News 200、Workplace 200、Mastodon 9 条，以一般就业讨论独立解读。真实校园网页面已完成 326 项统计、API、交互、CSV 和响应式检查，全部通过。采集结果和续跑命令见 [新增平台采集记录](docs/additional-collection.md)。
 
 图表统计范围由平台和年份控制；阅读区可再按关键词、情感、相关性、话题和情绪筛选。导出按钮包含当前匹配的全部分页结果。完成新的 `export` 后，点击“刷新数据”加载最新导出；只刷新网页不会增加模型调用。
 

@@ -15,8 +15,13 @@ from urllib.parse import parse_qs, unquote, urlsplit, urlunsplit
 DATASETS = {
     "balanced": ("按年配额样本", ""),
     "xiaohongshu-available": ("小红书可用补充集", "xiaohongshu-available"),
+    "additional-chinese": ("国内平台补充集", "additional-chinese"),
+    "overseas-employment": ("海外英文就业讨论", "overseas-employment"),
 }
-PLATFORMS = {"weibo": "微博", "xiaohongshu": "小红书", "x": "X"}
+PLATFORMS = {"weibo": "微博", "xiaohongshu": "小红书", "x": "X / Twitter",
+             "nowcoder": "牛客", "bilibili": "哔哩哔哩", "zhihu": "知乎",
+             "hackernews": "Hacker News", "workplace": "The Workplace",
+             "mastodon": "Mastodon", "reddit": "Reddit", "bluesky": "Bluesky"}
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
@@ -24,9 +29,11 @@ STATIC_FILES = {
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
 }
-POST_FIELDS = ("platform", "post_id", "text", "published_at", "season_year", "graduation_cohort")
+POST_FIELDS = ("platform", "post_id", "text", "published_at", "season_year", "graduation_cohort",
+               "entry_type", "thread_id", "parent_id", "language", "market_region")
 ANALYSIS_FIELDS = ("id", "relevant", "topics", "sentiment", "emotions", "intensity", "confidence", "evidence")
-SUMMARY_FIELDS = ("model", "prompt_version", "sampling_mode", "selected", "labelled", "limitations")
+SUMMARY_FIELDS = ("model", "prompt_version", "sampling_mode", "selected", "labelled", "limitations",
+                  "study_scope", "study_name", "description")
 GROUP_FIELDS = ("platform", "season_year", "target", "selected", "shortfall", "labelled", "relevant",
                 "relevant_shortfall", "publication_date_count", "publication_dates", "sentiments", "topics", "emotions")
 QUALITY_FIELDS = ("integrity_check", "raw_post_counts", "eligible_post_counts", "selected", "labelled", "relevant",
@@ -49,12 +56,29 @@ def source_url(value: object, platform: str) -> str:
             "weibo": {"weibo.com", "www.weibo.com", "m.weibo.cn"},
             "xiaohongshu": {"www.xiaohongshu.com", "xiaohongshu.com"},
             "x": {"x.com", "www.x.com", "twitter.com", "www.twitter.com"},
+            "nowcoder": {"nowcoder.com", "www.nowcoder.com"},
+            "bilibili": {"www.bilibili.com"},
+            "zhihu": {"www.zhihu.com", "zhihu.com"},
+            "hackernews": {"news.ycombinator.com"},
+            "workplace": {"workplace.stackexchange.com"},
+            "mastodon": {"hachyderm.io", "mastodon.social", "isdream.ing", "mastodon.gamedev.place",
+                         "mstdn.social", "toot.majorshouse.com", "universeodon.com"},
+            "reddit": {"reddit.com", "www.reddit.com"},
+            "bluesky": {"bsky.app"},
         }.get(platform, set())
         if (parsed.scheme != "https" or parsed.hostname not in allowed or parsed.username is not None
                 or parsed.password is not None or parsed.port not in (None, 443)):
             return ""
+        # HN's numeric item identifier is part of the permalink, not a token.
+        query = ""
+        if platform == "hackernews":
+            identifiers = parse_qs(parsed.query, keep_blank_values=True).get("id", [])
+            if len(identifiers) == 1 and identifiers[0].isascii() and identifiers[0].isdigit():
+                query = "id=" + identifiers[0]
+            elif parsed.path == "/item":
+                return ""
         # Use a canonical hostname rather than retaining arbitrary authority text.
-        return urlunsplit(("https", parsed.hostname or "", parsed.path, "", ""))
+        return urlunsplit(("https", parsed.hostname or "", parsed.path, query, ""))
     except ValueError:
         return ""
 

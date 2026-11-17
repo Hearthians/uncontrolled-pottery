@@ -1,7 +1,8 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const PLATFORMS = {weibo: "微博", xiaohongshu: "小红书", x: "X / Twitter"};
+const ENTRY_TYPES = {post: "原帖", story: "原帖", comment: "评论", reply: "回复", question: "问题", answer: "回答", video_description: "视频简介"};
+const PLATFORM_SYMBOLS = {weibo: "微", xiaohongshu: "红", x: "𝕏", nowcoder: "牛", bilibili: "哔", zhihu: "知", hackernews: "H", workplace: "W", mastodon: "M", reddit: "R", bluesky: "B"};
 const SENTIMENTS = {
   positive: {label: "正面", color: "#70a997", background: "#edf5f0"},
   negative: {label: "负面", color: "#da876e", background: "#fcf0eb"},
@@ -20,9 +21,13 @@ const percent = (count, total) => total ? `${(100 * count / total).toFixed(1)}%`
 const labelled = (post) => post.analysis && typeof post.analysis.relevant === "boolean";
 const relevant = (post) => labelled(post) && post.analysis.relevant;
 const list = (value) => Array.isArray(value) ? value : [];
-const years = () => state.data?.meta?.years || [...new Set(state.data.posts.map((p) => p.season_year))].sort();
+const years = () => state.data?.meta?.years || [...new Set(list(state.data?.posts).map((p) => p.season_year))].sort();
+const platforms = () => list(state.data?.meta?.platforms);
+const platformName = (id) => platforms().find((platform) => platform.id === id)?.label || id;
+const defaultPlatform = () => state.dataset === "xiaohongshu-available" ? "xiaohongshu" : "all";
+const isOverseas = () => state.dataset === "overseas-employment" || state.data?.summary?.study_scope === "overseas_employment";
 const yearLabel = () => state.year === "all" ? "全部年份" : `${state.year} 年`;
-const platformLabel = () => state.platform === "all" ? "全部平台" : PLATFORMS[state.platform];
+const platformLabel = () => state.platform === "all" ? "全部平台" : platformName(state.platform);
 const scope = (includeYear = true) => state.data.posts.filter((p) => (state.platform === "all" || p.platform === state.platform) && (!includeYear || state.year === "all" || p.season_year === state.year));
 const relatedInYear = (year) => scope(false).filter((p) => p.season_year === year && relevant(p));
 const countTags = (posts, field) => posts.reduce((counts, post) => {
@@ -34,6 +39,17 @@ const dateLabel = (value, includeTime = false) => {
   if (Number.isNaN(date.getTime())) return "日期未知";
   return new Intl.DateTimeFormat("zh-CN", {timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", ...(includeTime ? {hour: "2-digit", minute: "2-digit", hour12: false} : {})}).format(date);
 };
+const studyWindow = () => {
+  const window = state.data?.meta?.window || {};
+  const startMonth = window.start_month || 8, startDay = window.start_day || 1;
+  const end = new Date(Date.UTC(2000, (window.end_month || 11) - 1, window.end_day || 18) - 86400000);
+  const endMonth = end.getUTCMonth() + 1, endDay = end.getUTCDate();
+  const pad = (value) => String(value).padStart(2, "0");
+  return {short: `${pad(startMonth)}.${pad(startDay)} — ${pad(endMonth)}.${pad(endDay)}`, long: `${startMonth} 月 ${startDay} 日至 ${endMonth} 月 ${endDay} 日`};
+};
+const entryLabel = (post) => ENTRY_TYPES[post.entry_type] || post.entry_type || "原帖";
+const languageLabel = (language) => language === "en" ? "英文原文" : language === "zh" || language?.startsWith("zh-") ? "中文原文" : language ? `${language} 原文` : "";
+const regionLabel = (region) => ({China: "中国", china: "中国", international_unspecified: "国际（地区未明确）", overseas_unspecified: "海外（地区未明确）"}[region] || region || "");
 
 function notify(message) {
   clearTimeout(toastTimer);
@@ -65,13 +81,27 @@ async function loadData() {
     state.page = 1;
     state.topic = null;
     state.emotion = null;
-    if (state.dataset === "xiaohongshu-available") state.platform = "xiaohongshu";
+    const available = list(data.meta.available_datasets);
+    $("dataset").innerHTML = available.map((dataset) => `<option value="${escapeHTML(dataset.id)}">${escapeHTML(dataset.label)}</option>`).join("");
+    $("dataset").value = state.dataset;
+    if (state.dataset === "xiaohongshu-available" || !platforms().some((platform) => platform.id === state.platform)) state.platform = defaultPlatform();
+    $("platforms").innerHTML = `<button data-platform="all" aria-pressed="false" ${state.dataset === "xiaohongshu-available" ? "disabled" : ""}>全部平台</button>${platforms().map((platform) => `<button data-platform="${escapeHTML(platform.id)}" aria-pressed="false">${escapeHTML(platform.label)}</button>`).join("")}`;
     if (state.year !== "all" && !years().includes(state.year)) state.year = "all";
     $("years").innerHTML = `<button data-year="all" aria-pressed="false">全部年份</button>${years().map((year) => `<button data-year="${year}" aria-pressed="false">${year}</button>`).join("")}`;
     $("updated-at").textContent = `数据更新于 ${dateLabel(data.meta.updated_at, true)}`;
     $("footer-updated").textContent = `数据快照 · ${dateLabel(data.meta.updated_at, true)}`;
     $("limitations").innerHTML = list(data.summary.limitations).map((item) => `<li>${escapeHTML(item)}</li>`).join("");
     $("model-note").textContent = `自动标注模型：${data.summary.model} · 提示版本：${data.summary.prompt_version} · 原文依据经逐字校验，未全量人工复核。`;
+    const annualYears = years(), heading = isOverseas() ? "海外就业里的声音" : "秋招里的声音";
+    $("study-scope").textContent = isOverseas() ? "海外英文就业讨论" : "秋季校园招聘";
+    $("page-title").innerHTML = `${heading}<span>${annualYears.length ? `${annualYears[0]}—${annualYears.at(-1)}` : "暂无年份"}</span>`;
+    $("page-intro").textContent = data.summary.description || (isOverseas() ? "独立观察英文就业讨论，保留来源语境与英文原文。" : "从真实讨论出发，观察不同年份的话题与情绪。");
+    document.title = `${isOverseas() ? "海外就业观察" : "秋招观察"} · 年度话题与情绪`;
+    const window = studyWindow();
+    $("window-label").innerHTML = `${window.short} <span>· 北京时间</span>`;
+    $("method-scope").textContent = isOverseas()
+      ? `按原始发表时间划分年份，窗口为北京时间 ${window.long}。这是独立的英文就业讨论样本，包含原帖、评论、问题与回答，不代表中国秋季校园招聘。`
+      : `按原始发表时间划分秋招年份，窗口为北京时间 ${window.long}。主样本与小红书补充集有重叠；国内补充来源单独展示，各范围不相加。`;
     $("dashboard").hidden = false;
     render();
   } catch (error) {
@@ -101,9 +131,6 @@ function render() {
   updatePressed("platforms", "data-platform", state.platform);
   updatePressed("years", "data-year", state.year);
   updatePressed("units", "data-unit", state.unit);
-  for (const button of $("platforms").querySelectorAll("button")) {
-    button.disabled = state.dataset === "xiaohongshu-available" && button.dataset.platform !== "xiaohongshu";
-  }
   $("scope-label").textContent = `${platformLabel()} · ${yearLabel()}`;
   const posts = scope(), related = posts.filter(relevant), negative = related.filter((p) => p.analysis.sentiment === "negative").length;
   $("metric-selected").textContent = number(posts.length);
@@ -114,28 +141,42 @@ function render() {
   const covered = new Set(posts.map((p) => p.season_year)).size;
   $("metric-years").innerHTML = `${covered}<small>/ ${state.year === "all" ? years().length : 1}</small>`;
   $("metric-year-detail").textContent = state.year === "all" ? "按原始发表年份归属" : `${state.year} 年 · 共 ${new Set(posts.map((p) => p.published_at.slice(0, 10))).size} 个发表日期`;
-  $("context-title").textContent = state.dataset === "balanced" ? "先看样本，再看变化" : "补充集 · 年份分布不均衡";
   const groups = state.data.summary.groups;
   const context = [];
-  const weiboDates = groups.filter((g) => g.platform === "weibo" && g.selected).map((g) => g.publication_date_count);
+  const weiboDates = groups.filter((g) => g.platform === "weibo" && g.selected && Number.isFinite(g.publication_date_count)).map((g) => g.publication_date_count);
   if (weiboDates.length) {
     const minimum = Math.min(...weiboDates), maximum = Math.max(...weiboDates);
     context.push(`微博各年覆盖 ${minimum === maximum ? minimum : `${minimum}—${maximum}`} 个日期`);
   }
   if (groups.some((g) => g.platform === "xiaohongshu" && g.shortfall > 0)) context.push("小红书历史配额不足");
   if (groups.some((g) => g.platform === "x") && !groups.some((g) => g.platform === "x" && g.selected)) context.push("X 尚无样本");
-  $("context-text").textContent = state.dataset === "balanced"
-    ? `${context.join("；")}。图表描述已采讨论，不能代表整个市场。`
-    : (() => {
-      const largest = [...state.data.summary.groups].sort((a, b) => b.selected - a.selected)[0];
-      return `${state.data.summary.selected} 条候选中有 ${largest?.selected || 0} 条来自 ${largest?.season_year || "—"} 年；本集与按年样本有重叠，请分别阅读，不相加计数。`;
-    })();
-  $("coverage-note").textContent = state.dataset === "balanced"
-    ? "数量达到配额，也不等于相关讨论已足额。空缺年份保留缺口，2026 年为阶段样本。"
-    : "补充集保留可用条目，2026 年可以超过原定配额。历史缺口仍保留，不以近期帖子补齐。";
-  $("method-specific").textContent = state.dataset === "balanced"
-    ? `${context.join("；")}。方便样本不能用来估计整体市场情绪。`
-    : "小红书补充集偏重 2026 年，2023 年没有样本；与主样本重叠。历史比较请保留年份分布与缺口。";
+  const contextPrefix = context.length ? `${context.join("；")}。` : "";
+  const largest = [...groups].sort((a, b) => b.selected - a.selected)[0];
+  const latestYear = years().at(-1);
+  if (state.dataset === "balanced") {
+    $("context-title").textContent = "先看样本，再看变化";
+    $("context-text").textContent = `${contextPrefix}图表描述已采讨论，不能代表整个市场。`;
+    $("coverage-note").textContent = `数量达到配额，也不等于相关讨论已足额。空缺年份保留缺口${latestYear ? `，${latestYear} 年为阶段样本` : ""}。`;
+    $("method-specific").textContent = `${contextPrefix}方便样本不能用来估计整体市场情绪。`;
+  } else if (state.dataset === "xiaohongshu-available") {
+    $("context-title").textContent = "补充集 · 年份分布不均衡";
+    $("context-text").textContent = `${state.data.summary.selected} 条候选中有 ${largest?.selected || 0} 条来自 ${largest?.season_year || "—"} 年；本集与按年样本有重叠，请分别阅读，不相加计数。`;
+    $("coverage-note").textContent = "补充集保留可用条目，可以超过原定配额。历史缺口仍保留，不以近期帖子补齐。";
+    const emptyYears = groups.filter((group) => !group.selected).map((group) => group.season_year);
+    $("method-specific").textContent = `小红书补充集偏重 ${largest?.season_year || "—"} 年${emptyYears.length ? `，${emptyYears.join("、")} 年没有样本` : ""}；与主样本重叠。历史比较请保留年份分布与缺口。`;
+  } else if (isOverseas()) {
+    $("context-title").textContent = state.data.summary.study_name || "海外英文就业讨论 · 独立比较";
+    $("context-text").textContent = `${state.data.summary.selected} 条候选来自海外平台的英文就业讨论，包含不同地区与职业阶段；与中国秋招样本分开解读，英文原文保持原样。`;
+    $("coverage-note").textContent = "覆盖数按讨论条目计；同一主题内可有多条评论或回答。零样本与配额缺口均如实保留。";
+    $("method-specific").textContent = "英文就业话题可能涉及招聘、裁员、在职经历等；不等同于中国秋招。同一主题的多条发言不视为相互独立的受访者，平台与年份占比不能代表总体市场。";
+  } else {
+    $("context-title").textContent = state.data.summary.study_name || "国内平台补充 · 独立样本";
+    $("context-text").textContent = `${state.data.summary.selected} 条候选来自${platforms().map((platform) => platform.label).join("、")}。作为国内平台补充集独立阅读，保留各年缺口与来源差异。`;
+    $("coverage-note").textContent = "原帖、问题与视频简介按各自内容类型保留；候选足额不等于相关讨论足额，未采到的年份不作补齐。";
+    $("method-specific").textContent = "国内补充来源采用独立数据范围，平台的用户群体与内容形式不同。年份和平台差异可能来自可见性与采集方式，不能据此推断整体秋招市场。";
+  }
+  const targets = [...new Set(groups.map((group) => group.target).filter((target) => Number.isFinite(target) && target > 0))];
+  $("coverage-target").textContent = targets.length === 1 ? `每年 ${targets[0]} 条 / 平台` : "配额按分组显示";
   renderAnnual();
   renderCoverage();
   renderTopics(related);
@@ -181,16 +222,15 @@ function renderAnnual() {
 }
 
 function renderCoverage() {
-  const platforms = state.dataset === "xiaohongshu-available" ? ["xiaohongshu"] : Object.keys(PLATFORMS);
   let content = `<div></div>${years().map((year) => `<div class="coverage-year">${year}</div>`).join("")}`;
-  for (const platform of platforms) {
-    content += `<div class="coverage-platform"><i class="platform-dot ${platform}"></i>${platform === "x" ? "X" : PLATFORMS[platform]}</div>`;
+  for (const {id: platform, label} of platforms()) {
+    content += `<div class="coverage-platform" title="${escapeHTML(label)}"><i class="platform-dot ${escapeHTML(platform)}"></i>${escapeHTML(platform === "x" ? "X" : label)}</div>`;
     for (const year of years()) {
       const group = state.data.summary.groups.find((g) => g.platform === platform && g.season_year === year);
       const count = group?.selected || 0, target = group?.target || 40;
       const status = !count ? "empty" : count >= target ? "complete" : "partial";
       const selected = state.platform === platform && state.year === year;
-      content += `<button class="coverage-cell ${status}${selected ? " selected" : ""}" data-coverage-platform="${platform}" data-coverage-year="${year}" aria-label="${PLATFORMS[platform]} ${year}年，${count}条候选，原定${target}条${!count ? "，无样本" : ""}" data-tooltip="${escapeHTML(`${PLATFORMS[platform]} · ${year}|候选 ${count} / 原定 ${target} 条|模型判相关 ${group?.relevant || 0} 条`)}"><strong>${count ? number(count) : "—"}</strong><small>${count ? `/ ${target}` : "无样本"}</small></button>`;
+      content += `<button class="coverage-cell ${status}${selected ? " selected" : ""}" data-coverage-platform="${escapeHTML(platform)}" data-coverage-year="${year}" aria-label="${escapeHTML(label)} ${year}年，${count}条候选，原定${target}条${!count ? "，无样本" : ""}" data-tooltip="${escapeHTML(`${label} · ${year}|候选 ${count} / 原定 ${target} 条|模型判相关 ${group?.relevant || 0} 条`)}"><strong>${count ? number(count) : "—"}</strong><small>${count ? `/ ${target}` : "无样本"}</small></button>`;
     }
   }
   $("coverage").innerHTML = content;
@@ -260,8 +300,9 @@ function renderPosts() {
     const sentiment = analysis && relevant(post) ? SENTIMENTS[analysis.sentiment] : null;
     const label = sentiment?.label || (labelled(post) ? "不相关" : "待标注");
     const statusStyle = `color:${sentiment?.color || "#9ba9a3"};background:${sentiment?.background || "#f3f6f4"}`;
-    const symbol = post.platform === "weibo" ? "微" : post.platform === "xiaohongshu" ? "红" : "𝕏";
-    return `<article class="post-card"><div class="post-header"><span class="platform-badge ${escapeHTML(post.platform)}"><i>${symbol}</i>${escapeHTML(PLATFORMS[post.platform] || post.platform)}</span><span class="post-date">${dateLabel(post.published_at)} · ${post.season_year} 秋招</span><span class="post-sentiment" style="${statusStyle}">${label}</span>${analysis ? `<span class="post-confidence">置信度 ${Math.round(analysis.confidence * 100)}%</span>` : ""}</div><p class="post-body" id="post-body-${index}">${escapeHTML(post.text)}</p><button class="expand-button" data-expand="post-body-${index}" aria-expanded="false">展开全文 ↓</button>${analysis && list(analysis.evidence).length ? `<p class="post-evidence" title="${escapeHTML(analysis.evidence.join(" / "))}"><span>标注依据</span>${escapeHTML(analysis.evidence.map((s) => `「${s}」`).join(" · "))}</p>` : ""}<div class="post-bottom">${list(analysis?.topics).map((topic) => `<button class="post-tag" data-topic="${escapeHTML(topic)}">${escapeHTML(topic)}</button>`).join("")}${list(analysis?.emotions).map((emotion) => `<button class="post-tag emotion" data-emotion="${escapeHTML(emotion)}">${escapeHTML(emotion)}</button>`).join("")}${post.url ? `<a class="source-link" href="${escapeHTML(post.url)}" target="_blank" rel="noopener noreferrer">查看原帖 ↗</a>` : ""}</div></article>`;
+    const symbol = PLATFORM_SYMBOLS[post.platform] || platformName(post.platform).slice(0, 1);
+    const metadata = [dateLabel(post.published_at), `${post.season_year} ${isOverseas() ? "年" : "秋招"}`, entryLabel(post), languageLabel(post.language), regionLabel(post.market_region)].filter(Boolean).join(" · ");
+    return `<article class="post-card" data-entry-type="${escapeHTML(post.entry_type || "post")}"><div class="post-header"><span class="platform-badge ${escapeHTML(post.platform)}"><i>${escapeHTML(symbol)}</i>${escapeHTML(platformName(post.platform))}</span><span class="post-date">${escapeHTML(metadata)}</span><span class="post-sentiment" style="${statusStyle}">${label}</span>${analysis ? `<span class="post-confidence">置信度 ${Math.round(analysis.confidence * 100)}%</span>` : ""}</div><p class="post-body" id="post-body-${index}" lang="${escapeHTML(post.language || (isOverseas() ? "en" : "zh-CN"))}">${escapeHTML(post.text)}</p><button class="expand-button" data-expand="post-body-${index}" aria-expanded="false">展开全文 ↓</button>${analysis && list(analysis.evidence).length ? `<p class="post-evidence" title="${escapeHTML(analysis.evidence.join(" / "))}"><span>标注依据</span>${escapeHTML(analysis.evidence.map((s) => `「${s}」`).join(" · "))}</p>` : ""}<div class="post-bottom">${list(analysis?.topics).map((topic) => `<button class="post-tag" data-topic="${escapeHTML(topic)}">${escapeHTML(topic)}</button>`).join("")}${list(analysis?.emotions).map((emotion) => `<button class="post-tag emotion" data-emotion="${escapeHTML(emotion)}">${escapeHTML(emotion)}</button>`).join("")}${post.url ? `<a class="source-link" href="${escapeHTML(post.url)}" target="_blank" rel="noopener noreferrer">${["post", "story"].includes(post.entry_type || "post") ? "查看原帖" : "查看原文"} ↗</a>` : ""}</div></article>`;
   }).join("") : `<div class="empty-state"><span class="empty-icon">◌</span><strong>${scope().length ? "没有匹配的讨论" : "这个范围还没有样本"}</strong>${scope().length ? "试试其他关键词，或清除话题、情绪筛选。" : "已保留真实缺口，可切换年份或平台查看已有数据。"}</div>`;
   $("pagination-info").textContent = posts.length ? `显示 ${(state.page - 1) * PAGE_SIZE + 1}—${Math.min(state.page * PAGE_SIZE, posts.length)} 条，共 ${posts.length} 条` : "0 条匹配结果";
   $("page-number").textContent = `${state.page} / ${pages}`;
@@ -278,7 +319,7 @@ function changeScope(platform, year) {
 }
 
 function resetFilters() {
-  Object.assign(state, {platform: state.dataset === "balanced" ? "all" : "xiaohongshu", year: "all", query: "", sentiment: "all", relevance: "relevant", topic: null, emotion: null, page: 1});
+  Object.assign(state, {platform: defaultPlatform(), year: "all", query: "", sentiment: "all", relevance: "relevant", topic: null, emotion: null, page: 1});
   $("search").value = "";
   render();
 }
@@ -287,18 +328,18 @@ function downloadCSV() {
   if (!state.data || state.data.dataset !== state.dataset || document.body.classList.contains("is-loading")) return;
   const posts = matchingPosts();
   if (!posts.length) return;
-  const columns = ["平台", "秋招年份", "发表时间", "正文", "相关性", "话题", "情感", "情绪", "置信度", "依据", "原文链接"];
+  const columns = ["平台", isOverseas() ? "发表年份" : "秋招年份", "发表时间", "正文", "相关性", "话题", "情感", "情绪", "置信度", "依据", "原文链接", "内容类型", "语言", "市场范围", "主题ID", "父级ID"];
   const cell = (value) => {
     let text = String(value ?? "");
     if (/^[\s]*[=+@-]/u.test(text)) text = "'" + text;
     return `"${text.replace(/"/g, '""')}"`;
   };
-  const rows = posts.map((p) => [PLATFORMS[p.platform], p.season_year, p.published_at, p.text, labelled(p) ? p.analysis.relevant ? "相关" : "不相关" : "待标注", list(p.analysis?.topics).join("；"), SENTIMENTS[p.analysis?.sentiment]?.label || "", list(p.analysis?.emotions).join("；"), p.analysis?.confidence, list(p.analysis?.evidence).join("；"), p.url]);
+  const rows = posts.map((p) => [platformName(p.platform), p.season_year, p.published_at, p.text, labelled(p) ? p.analysis.relevant ? "相关" : "不相关" : "待标注", list(p.analysis?.topics).join("；"), SENTIMENTS[p.analysis?.sentiment]?.label || "", list(p.analysis?.emotions).join("；"), p.analysis?.confidence, list(p.analysis?.evidence).join("；"), p.url, entryLabel(p), languageLabel(p.language), regionLabel(p.market_region), p.thread_id, p.parent_id]);
   const csv = "\ufeff" + [columns, ...rows].map((row) => row.map(cell).join(",")).join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `秋招讨论_${state.dataset}_${state.platform}_${state.year}_${posts.length}条.csv`;
+  anchor.download = `${isOverseas() ? "海外就业讨论" : "秋招讨论"}_${state.dataset}_${state.platform}_${state.year}_${posts.length}条.csv`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

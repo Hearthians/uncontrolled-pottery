@@ -28,17 +28,17 @@
   </aside>
 
   <main id="main">
-    <div class="topbar"><span>研究工作台 <span class="slash">/</span> <strong>秋季校园招聘</strong></span><span id="updated-at" class="updated-at">正在读取本地数据…</span></div>
+    <div class="topbar"><span>研究工作台 <span class="slash">/</span> <strong id="study-scope">秋季校园招聘</strong></span><span id="updated-at" class="updated-at">正在读取本地数据…</span></div>
     <header class="page-heading" id="overview">
-      <div><p class="eyebrow">VOICES THROUGH THE YEARS</p><h1>秋招里的声音<span>2022—2026</span></h1><p class="intro">从真实讨论出发，观察不同年份的话题与情绪。</p></div>
+      <div><p class="eyebrow">VOICES THROUGH THE YEARS</p><h1 id="page-title">秋招里的声音<span>2022—2026</span></h1><p class="intro" id="page-intro">从真实讨论出发，观察不同年份的话题与情绪。</p></div>
       <div class="header-actions"><button id="refresh" class="button button-light"><span aria-hidden="true">↻</span> 刷新数据</button><button id="download" class="button button-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg>导出筛选样本</button></div>
     </header>
 
     <section class="filter-bar" aria-label="图表筛选">
-      <div class="dataset-field"><label for="dataset">数据范围</label><select id="dataset"><option value="balanced">按年配额样本</option><option value="xiaohongshu-available">小红书 · 可用补充集</option></select></div>
+      <div class="dataset-field"><label for="dataset">数据范围</label><select id="dataset"><option value="balanced">按年配额样本</option></select></div>
       <div class="filter-divider"></div>
-      <div id="platforms" class="segmented" role="group" aria-label="平台"><button data-platform="all" class="active" aria-pressed="true">全部平台</button><button data-platform="weibo" aria-pressed="false">微博</button><button data-platform="xiaohongshu" aria-pressed="false">小红书</button><button data-platform="x" aria-pressed="false">X / Twitter</button></div>
-      <span class="window-label">08.01 — 11.17 <span>· 北京时间</span></span>
+      <div id="platforms" class="segmented" role="group" aria-label="平台"></div>
+      <span class="window-label" id="window-label">08.01 — 11.17 <span>· 北京时间</span></span>
     </section>
     <div class="year-filter"><span>关注年份</span><div id="years" role="group" aria-label="年份"><button data-year="all" class="active" aria-pressed="true">全部年份</button></div><button id="reset" class="text-button">重置筛选</button></div>
 
@@ -60,10 +60,10 @@
           <div class="panel-heading"><div><h3>情感极性的年度分布</h3><p>点击图中年份或色块，查看对应讨论</p></div><span class="panel-kicker">YEAR BY YEAR</span></div>
           <div id="sentiment-legend" class="legend"></div>
           <div id="sentiment-chart" class="chart-container" aria-label="年度情感分布图"></div>
-          <p class="chart-footnote">n 为当年已标注且相关的帖子数；空缺不记作 0%。</p>
+          <p class="chart-footnote">n 为当年已标注且相关的讨论条目数；空缺不记作 0%。</p>
         </article>
         <article class="panel coverage-panel">
-          <div class="panel-heading"><div><h3>样本覆盖</h3><p>候选条数 / 原定配额，点击可筛选</p></div><span class="small-badge">每年 40 条 / 平台</span></div>
+          <div class="panel-heading"><div><h3>样本覆盖</h3><p>候选条数 / 原定配额，点击可筛选</p></div><span id="coverage-target" class="small-badge">每年 40 条 / 平台</span></div>
           <div id="coverage" class="coverage-grid" aria-label="平台与年份样本覆盖"></div>
           <div class="coverage-key"><span><i class="key-dot complete"></i>配额已满</span><span><i class="key-dot partial"></i>存在缺口</span><span><i class="key-dot empty"></i>尚无样本</span></div>
           <p id="coverage-note" class="panel-note"></p>
@@ -85,7 +85,7 @@
         </div>
       </section>
 
-      <section class="method-section panel" id="method"><div class="method-intro"><p class="eyebrow">READ THE DATA WITH CONTEXT</p><h2>让每一次比较，都有依据</h2><p>这些图表描述已采集讨论，帮助探索话题，保留具体语境。</p></div><div class="method-notes"><div><span>01 / 统计分母</span><p>情感、话题和情绪只统计已标注且相关的帖子。多标签可以共存，没有明确情绪也保留在分母中。</p></div><div><span>02 / 年份与数据范围</span><p>以原始发表时间划分秋招年份，窗口为北京时间 8 月 1 日至 11 月 17 日。两套样本有重叠，切换查看，不相加。</p></div><div><span>03 / 理解表达</span><p>模型标签描述作者在整帖中的表达；生活事件带来的喜悦，不一定代表对招聘市场乐观。</p></div><div><span>04 / 样本的边界</span><p id="method-specific">微博每年仅覆盖四天，小红书历史年份不足，X 尚无样本。方便样本不能用来估计整体市场情绪。</p></div></div><details><summary>查看完整数据说明</summary><ul id="limitations"></ul><p id="model-note"></p></details></section>
+      <section class="method-section panel" id="method"><div class="method-intro"><p class="eyebrow">READ THE DATA WITH CONTEXT</p><h2>让每一次比较，都有依据</h2><p>这些图表描述已采集讨论，帮助探索话题，保留具体语境。</p></div><div class="method-notes"><div><span>01 / 统计分母</span><p>情感、话题和情绪只统计已标注且相关的讨论条目。多标签可以共存，没有明确情绪也保留在分母中。</p></div><div><span>02 / 年份与数据范围</span><p id="method-scope">按原始发表时间划分年份，各数据范围分别比较。</p></div><div><span>03 / 理解表达</span><p>模型标签描述作者在该条内容中的表达；生活事件带来的喜悦，不一定代表对招聘市场乐观。</p></div><div><span>04 / 样本的边界</span><p id="method-specific">方便样本描述已采集讨论，不能用来估计整体市场情绪。</p></div></div><details><summary>查看完整数据说明</summary><ul id="limitations"></ul><p id="model-note"></p></details></section>
       <footer class="page-footer"><span>秋招观察 <span>·</span> 真实讨论，审慎解读</span><span id="footer-updated"></span></footer>
     </div>
   </main>

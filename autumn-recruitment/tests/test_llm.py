@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from autumn_recruitment.config import PROJECT_ROOT
-from autumn_recruitment.llm import validate_labels, content_hash, LLMClient, LLMSettings, load_settings
+from autumn_recruitment.llm import validate_labels, content_hash, LLMClient, LLMSettings, load_settings, prompt_version, PROMPT_VERSION, OVERSEAS_PROMPT_VERSION
 
 
 class LabelsTest(unittest.TestCase):
@@ -55,6 +55,23 @@ class LabelsTest(unittest.TestCase):
         self.assertEqual(requests[0][0], "/responses")
         self.assertFalse(requests[0][1]["store"])
         self.assertEqual(usage["total_tokens"], 5)
+
+    def test_overseas_scope_has_separate_prompt_and_keeps_original_evidence(self):
+        post = {**self.post, "platform": "hackernews", "text": "The job market is hard; I have no interviews."}
+        item = {**self.item, "id": "hackernews:1", "evidence": ["no interviews"]}
+        client = LLMClient(LLMSettings("https://example.invalid/v1", "model", "fixture"), study_scope="overseas_employment")
+        captured = []
+        def request(path, payload):
+            captured.append(payload)
+            return {"status": "completed", "output_text": json.dumps({"items": [item]})}
+        client._request = request
+        self.assertEqual(client.analyze([post])[0], [item])
+        self.assertIn("不要求提及中国", captured[0]["instructions"])
+        self.assertEqual(prompt_version({}), PROMPT_VERSION)
+        self.assertEqual(prompt_version({"study_scope": "overseas_employment"}), OVERSEAS_PROMPT_VERSION)
+        self.assertNotEqual(OVERSEAS_PROMPT_VERSION, PROMPT_VERSION)
+        with self.assertRaises(ValueError):
+            prompt_version({"study_scope": "unknown"})
 
 
 if __name__ == "__main__":

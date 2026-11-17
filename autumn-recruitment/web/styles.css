@@ -349,6 +349,11 @@ select {
   gap:3px;
   align-items:center
 }
+#platforms {
+  flex-wrap:wrap;
+  min-width:0;
+  max-width:100%
+}
 .segmented button {
   border:0;
   background:transparent;
@@ -676,7 +681,9 @@ select {
   display:flex;
   align-items:center;
   gap:5px;
-  white-space:nowrap
+  white-space:normal;
+  overflow-wrap:anywhere;
+  min-width:0
 }
 .platform-dot {
   width:5px;

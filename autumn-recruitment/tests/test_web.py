@@ -93,6 +93,38 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(failure.exception.code, 400)
             failure.exception.close()
 
+    def test_additional_datasets_preserve_scope_and_safe_entry_metadata(self):
+        groups = {
+            "additional-chinese": ("campus_recruitment", ["nowcoder", "bilibili", "zhihu"]),
+            "overseas-employment": ("overseas_employment", ["hackernews", "workplace", "mastodon", "reddit", "bluesky"]),
+        }
+        for name, (study_scope, platforms) in groups.items():
+            summary = copy.deepcopy(self.summary)
+            summary.update(study_scope=study_scope, study_name="独立研究范围", description="来源与统计范围说明",
+                           groups=[dict(self.summary["groups"][0], platform=platform) for platform in platforms])
+            posts = [dict(self.post, platform=platform, entry_type="comment", thread_id="thread-1",
+                          parent_id="parent-1", language="en", market_region="international_unspecified")
+                     for platform in platforms]
+            folder = self.root / "outputs" / name
+            self.write_export(folder, summary, posts[0])
+            (folder / "sample.jsonl").write_text("\n".join(json.dumps(post) for post in posts), encoding="utf-8")
+        for name, (study_scope, platforms) in groups.items():
+            with self.subTest(dataset=name):
+                _, text = self.get("/api/dashboard?dataset=" + name)
+                data = json.loads(text)
+                self.assertEqual(data["summary"]["study_scope"], study_scope)
+                self.assertEqual(data["summary"]["study_name"], "独立研究范围")
+                self.assertEqual(data["summary"]["description"], "来源与统计范围说明")
+                self.assertEqual([p["id"] for p in data["meta"]["platforms"]], platforms)
+                self.assertEqual(len(data["meta"]["available_datasets"]), 4)
+                self.assertEqual([p["platform"] for p in data["posts"]], platforms)
+                for post in data["posts"]:
+                    for field, expected in (("entry_type", "comment"), ("thread_id", "thread-1"),
+                                            ("parent_id", "parent-1"), ("language", "en"),
+                                            ("market_region", "international_unspecified")):
+                        self.assertEqual(post[field], expected)
+                self.assertNotIn("hidden-marker", text)
+
     def test_static_allowlist_and_head_health(self):
         _, text = self.get("/")
         self.assertIn("<title>秋招", text)
@@ -126,6 +158,30 @@ class DashboardTests(unittest.TestCase):
                       "https://user:secret@www.xiaohongshu.com/note", "https://www.xiaohongshu.com:8080/note", "http://www.xiaohongshu.com/note"):
             with self.subTest(url=value):
                 self.assertEqual(source_url(value, "xiaohongshu"), "")
+
+    def test_new_platform_permalink_hosts_are_exact_and_tokens_removed(self):
+        origins = {"nowcoder": "www.nowcoder.com", "bilibili": "www.bilibili.com", "zhihu": "www.zhihu.com",
+                   "workplace": "workplace.stackexchange.com", "mastodon": "mastodon.social",
+                   "reddit": "www.reddit.com", "bluesky": "bsky.app"}
+        for platform, host in origins.items():
+            with self.subTest(platform=platform):
+                self.assertEqual(source_url(f"https://{host}:443/post/123?token=hidden-marker#fragment", platform), f"https://{host}/post/123")
+                self.assertEqual(source_url(f"https://{host}.evil.example/post/123", platform), "")
+                self.assertEqual(source_url(f"https://user:secret@{host}/post/123", platform), "")
+        for host in ("hachyderm.io", "isdream.ing", "mastodon.gamedev.place", "mstdn.social", "toot.majorshouse.com", "universeodon.com"):
+            self.assertEqual(source_url(f"https://{host}/@user/123?token=hidden-marker", "mastodon"), f"https://{host}/@user/123")
+        self.assertEqual(source_url("https://unverified-mastodon.example/@user/123", "mastodon"), "")
+
+    def test_hackernews_permalink_preserves_one_ascii_numeric_id_only(self):
+        self.assertEqual(source_url("https://news.ycombinator.com/item?id=123&token=hidden-marker#comments", "hackernews"),
+                         "https://news.ycombinator.com/item?id=123")
+        self.assertEqual(source_url("https://news.ycombinator.com/item?id=%31%32%33", "hackernews"),
+                         "https://news.ycombinator.com/item?id=123")
+        for query in ("", "id=", "id=abc", "id=-1", "id=１２３", "id=1&id=2", "id=1&id=1"):
+            with self.subTest(query=query):
+                self.assertEqual(source_url("https://news.ycombinator.com/item?" + query, "hackernews"), "")
+        self.assertEqual(source_url("https://news.ycombinator.com/?token=hidden-marker", "hackernews"),
+                         "https://news.ycombinator.com/")
 
     def test_serve_command_does_not_open_storage_or_model(self):
         output = io.StringIO()

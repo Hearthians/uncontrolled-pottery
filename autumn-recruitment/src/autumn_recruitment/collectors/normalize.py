@@ -8,6 +8,8 @@ from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 from typing import Any
 
+from ..config import PLATFORMS
+
 
 class CollectorError(RuntimeError):
     """Collection cannot continue; credentials and response bodies stay out of errors."""
@@ -103,9 +105,10 @@ def count(value: Any) -> int | None:
 
 
 def platform_name(value: str) -> str:
-    result = {"xhs": "xiaohongshu", "小红书": "xiaohongshu", "微博": "weibo", "twitter": "x"}.get(value.lower(), value.lower())
-    if result not in {"weibo", "xiaohongshu", "x"}:
-        raise ValueError("平台必须为 weibo、xiaohongshu 或 x")
+    result = {"xhs": "xiaohongshu", "小红书": "xiaohongshu", "微博": "weibo", "twitter": "x",
+              "hn": "hackernews", "牛客": "nowcoder", "b站": "bilibili", "知乎": "zhihu"}.get(value.lower(), value.lower())
+    if result not in PLATFORMS:
+        raise ValueError("未知数据平台")
     return result
 
 
@@ -116,7 +119,10 @@ def post(platform: str, post_id: Any, text: Any, published_at: Any, *, url: str 
     if not identity or not body:
         raise ValueError("帖子必须具有 post_id 和正文")
     if not url:
-        url = {"weibo": "https://weibo.com/detail/", "xiaohongshu": "https://www.xiaohongshu.com/explore/", "x": "https://x.com/i/status/"}[platform] + identity
+        prefix = {"weibo": "https://weibo.com/detail/", "xiaohongshu": "https://www.xiaohongshu.com/explore/", "x": "https://x.com/i/status/"}.get(platform)
+        if prefix is None:
+            raise ValueError("新增平台记录必须提供原文 URL")
+        url = prefix + identity
     return {
         "platform": platform, "post_id": identity, "text": body,
         "published_at": timestamp(published_at, platform), "url": url,

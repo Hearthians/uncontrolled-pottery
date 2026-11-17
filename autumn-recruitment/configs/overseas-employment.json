@@ -1,0 +1,79 @@
+{
+  "study_name": "海外英文就业讨论",
+  "timezone": "Asia/Shanghai",
+  "years": [
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "window": {
+    "start_month": 8,
+    "start_day": 1,
+    "end_month": 11,
+    "end_day": 18
+  },
+  "target_per_platform": 200,
+  "sampling": {
+    "seed": "20261117",
+    "max_per_author_per_year": 3
+  },
+  "platforms": {
+    "hackernews": {
+      "enabled": true,
+      "queries": [
+        "job market",
+        "new grad",
+        "job search"
+      ]
+    },
+    "workplace": {
+      "enabled": true,
+      "queries": [
+        "job market",
+        "new grad",
+        "job search"
+      ]
+    },
+    "mastodon": {
+      "enabled": true,
+      "queries": [
+        "job market",
+        "new grad",
+        "job search"
+      ]
+    },
+    "reddit": {
+      "enabled": true,
+      "queries": [
+        "job market",
+        "new grad",
+        "job search"
+      ]
+    },
+    "bluesky": {
+      "enabled": true,
+      "queries": [
+        "job market",
+        "new grad",
+        "job search"
+      ]
+    }
+  },
+  "filters": {
+    "min_text_length": 12,
+    "require_keywords": [],
+    "exclude_regex": []
+  },
+  "storage": {
+    "database": "data/additional-study.sqlite3",
+    "raw_dir": "data/raw/additional",
+    "output_dir": "outputs/overseas-employment"
+  },
+  "llm": {
+    "batch_size": 8
+  },
+  "study_scope": "overseas_employment",
+  "description": "海外英文等就业讨论独立比较组，含一般求职、职场问答及评论，与中文秋招人群分开解读。"
+}

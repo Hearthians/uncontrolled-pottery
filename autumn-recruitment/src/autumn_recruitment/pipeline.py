@@ -59,6 +59,10 @@ def make_plan(config: dict) -> list[dict]:
                     until_date = end_utc.date() + timedelta(days=end_utc.time() != time.min)
                     xquery = f"{query} since:{start_utc.date()} until:{until_date}"
                     url = "https://x.com/search?" + urlencode({"q": xquery, "src": "typed_query", "f": "live"})
+                elif platform in PLATFORMS:
+                    # Additional public sources have their own source adapters;
+                    # do not invent a browser URL for an API collection job.
+                    url = None
                 else:
                     raise ValueError(f"Unknown platform: {platform}")
                 jobs.append({"platform": platform, "year": year, "query": query,

@@ -18,6 +18,32 @@ from autumn_recruitment.collectors.normalize import date_window, in_window, time
 
 
 class CollectorTests(unittest.TestCase):
+    def test_canonical_plaintext_round_trip_preserves_code_and_entities(self):
+        body = 'Interview feedback: use List<T>, write &gt; literally.\n  Keep indentation.'
+        record = {"platform": "hackernews", "post_id": "42", "text": body,
+                  "published_at": "2024-09-01T01:00:00Z", "author_id": "author",
+                  "url": "https://news.ycombinator.com/item?id=42"}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"posts.jsonl"
+            path.write_text(json.dumps(record)+"\n", encoding="utf-8")
+            imported = import_posts(path, "hackernews")[0]
+        self.assertEqual(imported["text"], body)
+
+    def test_additional_source_import_preserves_thread_and_language_metadata(self):
+        record = {"platform": "workplace", "post_id": "answer:42", "text": "The job search has been exhausting.",
+                  "published_at": "2024-09-10T13:00:00Z", "url": "https://workplace.stackexchange.com/a/42",
+                  "entry_type": "answer", "thread_id": "40", "parent_id": "40", "language": "en",
+                  "market_region": "international_unspecified", "updated_at": "2025-01-01T00:00:00Z",
+                  "temporal_review": {"exclude_from_season": True}}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/"posts.jsonl"
+            path.write_text(json.dumps(record)+"\n", encoding="utf-8")
+            imported = import_posts(path, "workplace")[0]
+        self.assertEqual(imported["post_id"], "answer:42")
+        self.assertEqual(imported["published_at"], "2024-09-10T13:00:00+00:00")
+        for field in ("entry_type", "thread_id", "parent_id", "language", "market_region", "updated_at", "temporal_review"):
+            self.assertEqual(imported[field], record[field])
+
     def test_xhs_security_error_stops_but_missing_note_is_not_a_security_gate(self):
         from autumn_recruitment.collectors.browser import _check_page
         page = MagicMock()

@@ -9,7 +9,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PLATFORMS = ("weibo", "xiaohongshu", "x")
+PLATFORMS = ("weibo", "xiaohongshu", "x", "nowcoder", "bilibili", "zhihu",
+             "hackernews", "workplace", "mastodon", "reddit", "bluesky")
 
 
 def _project_path(root: Path, value: str) -> str:

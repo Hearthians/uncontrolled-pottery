@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 import sys
 
-from .config import load_config
-from .llm import LLMClient, PROMPT_VERSION, content_hash, load_settings
+from .config import load_config, PLATFORMS
+from .llm import LLMClient, PROMPT_VERSION, content_hash, load_settings, prompt_version
 from .pipeline import clean_posts, make_plan, select_sample
 from .reporting import export_study, write_json
 from .storage import Storage
@@ -41,7 +41,7 @@ def make_parser() -> argparse.ArgumentParser:
     commands.add_parser("llm-check", help="用一条明确标记的合成帖子验证真实模型调用")
     importer = commands.add_parser("import", help="导入 CSV、JSON 或 JSONL")
     importer.add_argument("path")
-    importer.add_argument("--platform", required=True, choices=["weibo", "xiaohongshu", "x"])
+    importer.add_argument("--platform", required=True, choices=PLATFORMS)
     commands.add_parser("sample", help="清洗并按平台/年份抽样，输出缺口")
     browser = commands.add_parser("collect-browser", help="浏览器 RPA，默认可见窗口，可复用登录资料")
     browser.add_argument("--platform", required=True, choices=["weibo", "xiaohongshu", "x"])
@@ -145,13 +145,13 @@ def main(argv: list[str] | None = None) -> int:
                 if not 1 <= batch_size <= 16:
                     raise ValueError("batch-size 必须为 1 到 16。")
                 settings = load_settings()
-                version = PROMPT_VERSION  # Version follows actual prompt, not an editable config label.
+                version = prompt_version(config)
                 posts = selected_posts(store, config)
                 pending = [p for p in posts if store.get_analysis(p["platform"], p["post_id"], content_hash(p), settings.model, version) is None]
                 cached = len(posts) - len(pending)
                 if args.limit is not None:
                     pending = pending[:args.limit]
-                client = LLMClient(settings)
+                client = LLMClient(settings, study_scope=config.get("study_scope", "campus_recruitment"))
                 done = 0
                 for index in range(0, len(pending), batch_size):
                     batch = pending[index:index + batch_size]
@@ -163,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
                 emit({"analysed_this_run": done, "cached": cached, "selected": len(posts), "model": settings.model})
             elif args.command == "export":
                 settings = load_settings()
-                summary = export_study(selected_posts(store, config), store.list_analyses(), config, settings.model, PROMPT_VERSION)
+                summary = export_study(selected_posts(store, config), store.list_analyses(), config, settings.model, prompt_version(config))
                 emit({"selected": summary["selected"], "labelled": summary["labelled"], "output_dir": config["output_dir"]})
         return 0
     except (ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:

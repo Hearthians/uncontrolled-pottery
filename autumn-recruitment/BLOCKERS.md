@@ -58,4 +58,6 @@ Set-Location D:\lizd\work\autumn-recruitment
 
 历史补采命令与新设备安装方法见 [README.md](README.md)、[WINDOWS.md](WINDOWS.md)。获得 X API 凭据后，通过环境配置 `X_BEARER_TOKEN`，再执行 `collect-x-api --endpoint all`；实际不足的年份始终保留缺口，不用其他年份补齐。
 
-海外补充来源的实测分别见 [Hacker News / Workplace](docs/overseas-platforms.md) 与 [Reddit / Bluesky / Mastodon / 一亩三分地](docs/overseas-social-platforms.md)。当前仅完成少量可行性探测，不计入上述平台数据量；英文海外就业讨论应作为独立比较组。
+新增平台已继续开展真实采集：牛客公开详情、Hacker News 原文接口、Workplace API 和少量 Mastodon 公开内容可用。哔哩哔哩遇 HTTP 412，知乎、Reddit、Bluesky 本轮入口遇 HTTP 403 后停止。哔哩哔哩搜索简介可能截断，未取得完整详情的候选未纳入分析。具体条数与标注结果见 [新增平台采集记录](docs/additional-collection.md)，与上述原始三平台数据分别计数。
+
+Hacker News、Workplace 和 Mastodon 作为海外就业讨论独立组；保留原始语言与问题、回答、评论等类型。同一主题的多条言论有相关性，不能视为独立受访者。Reddit / Bluesky 的相关 API 环境变量本轮未检测到可用配置，这不表示已检查所有可能的凭据文件。
