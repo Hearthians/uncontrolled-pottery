@@ -20,6 +20,7 @@ import {
   Play,
   Plus,
   RotateCw,
+  Shapes,
   Sparkles,
   Square,
   Upload,
@@ -544,6 +545,18 @@ export default function App() {
           >
             <FlaskConical size={22} strokeWidth={1.5} />
             <span>Lab</span>
+          </a>
+          <a
+            className="rail-item lab-link"
+            href={`${location.pathname}?lab=score-study`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open form study in a new tab"
+            title="Form study · opens a new tab"
+            onClick={() => { if (status === "printing") pausePrint(); }}
+          >
+            <Shapes size={22} strokeWidth={1.5} />
+            <span>Form</span>
           </a>
         </div>
         <div className="rail-bottom">
