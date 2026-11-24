@@ -52,6 +52,7 @@ autumn-recruitment/
 ├── run.py                      # 本项目入口
 ├── src/autumn_recruitment/      # 采集、导入、抽样、存储与分析
 ├── tests/                      # 离线检查
+├── dashboard-data/              # GitHub 网页数据快照及使用说明
 ├── data/
 │   ├── raw/                    # 原始采集记录 / 待导入导出文件
 │   ├── browser-profiles/       # 各平台的本机登录资料
@@ -85,6 +86,8 @@ python3 run.py llm-check
 `llm-check` 使用一条明确标记为人工合成的秋招文本，实际调用模型验证结构化标注；它会产生模型请求，不能当作真实采集样本。
 
 ## 本地可视化网页
+
+GitHub 上的 [网页数据快照](dashboard-data/README.md) 包含五组样本及 957 条焦虑评分。新克隆仓库可按说明复制快照到 `outputs/`。
 
 已有 `outputs/` 导出后，在本目录运行：
 

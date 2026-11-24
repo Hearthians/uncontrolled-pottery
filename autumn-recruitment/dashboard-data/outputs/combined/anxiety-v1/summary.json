@@ -1,0 +1,14 @@
+{
+  "model": "gpt-6.1-sol",
+  "prompt_version": "anxiety-intensity-v1",
+  "total": 957,
+  "completed": 957,
+  "scored": 957,
+  "unassessable": 0,
+  "error": 0,
+  "pending": 0,
+  "mean": 0.07251828631138976,
+  "median": 0,
+  "updated_at": "2026-11-17T15:42:54.319004+00:00",
+  "corpus_sha256": "fc72944a7d6677b30292dbe6517c6baa90e785be325b3d981c1680bc08d0758e"
+}

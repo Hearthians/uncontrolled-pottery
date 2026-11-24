@@ -1,0 +1,18 @@
+{
+  "integrity_check": "ok",
+  "raw_post_counts": {
+    "weibo": 471,
+    "xiaohongshu": 250
+  },
+  "eligible_post_counts": {
+    "weibo": 395,
+    "xiaohongshu": 207
+  },
+  "selected": 207,
+  "labelled": 207,
+  "relevant": 153,
+  "duplicate_selected_ids": 0,
+  "selected_missing_author": 0,
+  "selected_with_ui_suffix": 0,
+  "raw_record_versions": 1106
+}

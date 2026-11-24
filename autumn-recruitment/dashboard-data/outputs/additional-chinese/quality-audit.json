@@ -1,0 +1,21 @@
+{
+  "integrity_check": [
+    "ok"
+  ],
+  "raw_post_counts": {
+    "nowcoder": 143
+  },
+  "eligible_post_counts": {
+    "nowcoder": 142
+  },
+  "selected": 141,
+  "labelled": 141,
+  "relevant": 133,
+  "duplicate_selected_ids": 0,
+  "selected_missing_author": 0,
+  "raw_record_versions": {
+    "bilibili": 0,
+    "nowcoder": 238,
+    "zhihu": 0
+  }
+}

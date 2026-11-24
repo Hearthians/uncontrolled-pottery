@@ -1,0 +1,536 @@
+{
+  "model": "gpt-6.1-sol",
+  "prompt_version": "recruitment-v2",
+  "sampling_mode": "balanced",
+  "selected": 268,
+  "labelled": 268,
+  "limitations": [
+    "搜索结果为非概率样本，不能据此估计整个秋招市场或平台人群的情绪比例。",
+    "多标签话题和情绪计数的分母为各组已标注且相关的帖子，比例之和可能超过 100%。",
+    "候选缺口按选中条数计算；相关缺口按模型确认相关的条数计算，含尚未标注的潜在缺口。",
+    "正文明确包含研究窗口后新增内容、并经 temporal_review 确认的帖子不纳入按年比较；原始记录保留。其余历史帖也是采集时可见版本，不能保证还原最初正文。",
+    "情感与情绪描述作者在整帖中的表达，可能涉及生活或其他事件，不能一律解释为对招聘市场的态度；标签未经全量人工语义复核。",
+    "缺少的年份配额保留缺口；未完成标注的帖子不计入情绪分母。",
+    "2026 年为采集时已发表且处于共同窗口内的阶段样本，不代表完整秋招季。",
+    "本次微博采集取月度搜索结果的前部页面，所选年份样本仅覆盖各年不超过 4 个日期；存在排序和边界日期集中偏差，不能据此判断整个秋招季的变化。具体日期见各组 publication_dates。"
+  ],
+  "groups": [
+    {
+      "platform": "weibo",
+      "season_year": 2022,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 34,
+      "relevant_shortfall": 6,
+      "publication_date_count": 4,
+      "publication_dates": [
+        "2022-08-31",
+        "2022-09-30",
+        "2022-10-31",
+        "2022-11-17"
+      ],
+      "sentiments": {
+        "negative": 19,
+        "positive": 7,
+        "mixed": 5,
+        "neutral": 3
+      },
+      "topics": {
+        "升学与就业选择": 3,
+        "薪资待遇": 2,
+        "求职压力与生活安排": 20,
+        "求职策略": 4,
+        "笔试面试": 10,
+        "简历筛选": 4,
+        "岗位数量": 2,
+        "公司选择": 3,
+        "录用与毁约": 5,
+        "求职进展": 11,
+        "竞争程度": 1
+      },
+      "emotions": {
+        "失望": 5,
+        "焦虑": 8,
+        "愤怒": 5,
+        "挫败": 5,
+        "期待": 9,
+        "平静": 1,
+        "不确定": 1,
+        "喜悦": 4
+      }
+    },
+    {
+      "platform": "weibo",
+      "season_year": 2023,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 30,
+      "relevant_shortfall": 10,
+      "publication_date_count": 4,
+      "publication_dates": [
+        "2023-08-31",
+        "2023-09-30",
+        "2023-10-31",
+        "2023-11-17"
+      ],
+      "sentiments": {
+        "positive": 6,
+        "negative": 16,
+        "uncertain": 3,
+        "mixed": 3,
+        "neutral": 2
+      },
+      "topics": {
+        "求职进展": 8,
+        "笔试面试": 6,
+        "公司选择": 3,
+        "竞争程度": 1,
+        "求职压力与生活安排": 12,
+        "升学与就业选择": 5,
+        "求职策略": 3,
+        "录用与毁约": 2,
+        "简历筛选": 1,
+        "其他": 1,
+        "岗位数量": 1,
+        "行业前景": 1
+      },
+      "emotions": {
+        "喜悦": 3,
+        "愤怒": 4,
+        "失望": 5,
+        "挫败": 7,
+        "不确定": 4,
+        "期待": 7,
+        "焦虑": 3
+      }
+    },
+    {
+      "platform": "weibo",
+      "season_year": 2024,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 34,
+      "relevant_shortfall": 6,
+      "publication_date_count": 4,
+      "publication_dates": [
+        "2024-08-31",
+        "2024-09-30",
+        "2024-10-31",
+        "2024-11-17"
+      ],
+      "sentiments": {
+        "mixed": 8,
+        "neutral": 6,
+        "negative": 17,
+        "positive": 3
+      },
+      "topics": {
+        "求职压力与生活安排": 22,
+        "笔试面试": 3,
+        "求职进展": 10,
+        "录用与毁约": 3,
+        "公司选择": 3,
+        "其他": 1,
+        "升学与就业选择": 1,
+        "求职策略": 3,
+        "简历筛选": 3,
+        "薪资待遇": 1,
+        "竞争程度": 1
+      },
+      "emotions": {
+        "喜悦": 6,
+        "平静": 2,
+        "失望": 3,
+        "焦虑": 4,
+        "期待": 5,
+        "挫败": 9,
+        "愤怒": 3,
+        "不确定": 2
+      }
+    },
+    {
+      "platform": "weibo",
+      "season_year": 2025,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 30,
+      "relevant_shortfall": 10,
+      "publication_date_count": 4,
+      "publication_dates": [
+        "2025-08-31",
+        "2025-09-30",
+        "2025-10-31",
+        "2025-11-17"
+      ],
+      "sentiments": {
+        "negative": 11,
+        "uncertain": 3,
+        "positive": 5,
+        "mixed": 7,
+        "neutral": 4
+      },
+      "topics": {
+        "升学与就业选择": 2,
+        "求职压力与生活安排": 18,
+        "简历筛选": 4,
+        "求职进展": 5,
+        "薪资待遇": 1,
+        "求职策略": 2,
+        "其他": 3,
+        "录用与毁约": 3,
+        "行业前景": 1,
+        "笔试面试": 2,
+        "竞争程度": 1,
+        "岗位数量": 1
+      },
+      "emotions": {
+        "不确定": 3,
+        "焦虑": 5,
+        "愤怒": 3,
+        "喜悦": 6,
+        "期待": 3,
+        "失望": 1,
+        "挫败": 8,
+        "平静": 2
+      }
+    },
+    {
+      "platform": "weibo",
+      "season_year": 2026,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 35,
+      "relevant_shortfall": 5,
+      "publication_date_count": 4,
+      "publication_dates": [
+        "2026-08-31",
+        "2026-09-30",
+        "2026-10-31",
+        "2026-11-17"
+      ],
+      "sentiments": {
+        "neutral": 5,
+        "negative": 23,
+        "positive": 4,
+        "mixed": 2,
+        "uncertain": 1
+      },
+      "topics": {
+        "求职压力与生活安排": 20,
+        "笔试面试": 4,
+        "求职策略": 6,
+        "求职进展": 6,
+        "录用与毁约": 3,
+        "简历筛选": 3,
+        "升学与就业选择": 4,
+        "公司选择": 2,
+        "薪资待遇": 3,
+        "其他": 2,
+        "竞争程度": 3,
+        "岗位数量": 1
+      },
+      "emotions": {
+        "愤怒": 2,
+        "期待": 6,
+        "焦虑": 10,
+        "失望": 6,
+        "挫败": 9,
+        "不确定": 3,
+        "平静": 1,
+        "喜悦": 1
+      }
+    },
+    {
+      "platform": "xiaohongshu",
+      "season_year": 2022,
+      "target": 40,
+      "selected": 3,
+      "shortfall": 37,
+      "labelled": 3,
+      "relevant": 3,
+      "relevant_shortfall": 37,
+      "publication_date_count": 3,
+      "publication_dates": [
+        "2022-09-20",
+        "2022-09-30",
+        "2022-10-13"
+      ],
+      "sentiments": {
+        "negative": 2,
+        "positive": 1
+      },
+      "topics": {
+        "求职策略": 1,
+        "求职压力与生活安排": 2,
+        "竞争程度": 1
+      },
+      "emotions": {
+        "挫败": 1,
+        "平静": 1
+      }
+    },
+    {
+      "platform": "xiaohongshu",
+      "season_year": 2023,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    },
+    {
+      "platform": "xiaohongshu",
+      "season_year": 2024,
+      "target": 40,
+      "selected": 8,
+      "shortfall": 32,
+      "labelled": 8,
+      "relevant": 6,
+      "relevant_shortfall": 34,
+      "publication_date_count": 7,
+      "publication_dates": [
+        "2024-09-05",
+        "2024-09-17",
+        "2024-09-27",
+        "2024-10-11",
+        "2024-10-17",
+        "2024-11-02",
+        "2024-11-07"
+      ],
+      "sentiments": {
+        "negative": 5,
+        "mixed": 1
+      },
+      "topics": {
+        "公司选择": 1,
+        "竞争程度": 2,
+        "简历筛选": 2,
+        "求职压力与生活安排": 2,
+        "求职进展": 1,
+        "笔试面试": 2,
+        "其他": 1
+      },
+      "emotions": {
+        "挫败": 4,
+        "愤怒": 4,
+        "失望": 1,
+        "期待": 1,
+        "不确定": 1
+      }
+    },
+    {
+      "platform": "xiaohongshu",
+      "season_year": 2025,
+      "target": 40,
+      "selected": 17,
+      "shortfall": 23,
+      "labelled": 17,
+      "relevant": 12,
+      "relevant_shortfall": 28,
+      "publication_date_count": 16,
+      "publication_dates": [
+        "2025-08-08",
+        "2025-08-16",
+        "2025-09-03",
+        "2025-09-04",
+        "2025-09-10",
+        "2025-09-19",
+        "2025-09-27",
+        "2025-09-29",
+        "2025-10-10",
+        "2025-10-14",
+        "2025-10-16",
+        "2025-10-21",
+        "2025-10-24",
+        "2025-10-27",
+        "2025-10-28",
+        "2025-11-17"
+      ],
+      "sentiments": {
+        "mixed": 2,
+        "neutral": 3,
+        "negative": 5,
+        "positive": 2
+      },
+      "topics": {
+        "岗位数量": 3,
+        "竞争程度": 4,
+        "简历筛选": 2,
+        "笔试面试": 3,
+        "求职策略": 2,
+        "求职进展": 5,
+        "行业前景": 1,
+        "公司选择": 2,
+        "薪资待遇": 1,
+        "录用与毁约": 1
+      },
+      "emotions": {
+        "挫败": 3,
+        "失望": 2,
+        "期待": 1,
+        "愤怒": 1
+      }
+    },
+    {
+      "platform": "xiaohongshu",
+      "season_year": 2026,
+      "target": 40,
+      "selected": 40,
+      "shortfall": 0,
+      "labelled": 40,
+      "relevant": 28,
+      "relevant_shortfall": 12,
+      "publication_date_count": 27,
+      "publication_dates": [
+        "2026-08-23",
+        "2026-09-06",
+        "2026-09-11",
+        "2026-09-12",
+        "2026-09-15",
+        "2026-09-19",
+        "2026-10-05",
+        "2026-10-12",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-24",
+        "2026-10-28",
+        "2026-10-30",
+        "2026-11-03",
+        "2026-11-04",
+        "2026-11-05",
+        "2026-11-06",
+        "2026-11-08",
+        "2026-11-10",
+        "2026-11-11",
+        "2026-11-12",
+        "2026-11-13",
+        "2026-11-14",
+        "2026-11-15",
+        "2026-11-16",
+        "2026-11-17"
+      ],
+      "sentiments": {
+        "negative": 10,
+        "neutral": 7,
+        "positive": 6,
+        "uncertain": 2,
+        "mixed": 3
+      },
+      "topics": {
+        "简历筛选": 7,
+        "竞争程度": 6,
+        "求职压力与生活安排": 3,
+        "求职策略": 16,
+        "录用与毁约": 2,
+        "笔试面试": 12,
+        "求职进展": 8,
+        "岗位数量": 5,
+        "公司选择": 5,
+        "薪资待遇": 4,
+        "行业前景": 3
+      },
+      "emotions": {
+        "挫败": 8,
+        "失望": 5,
+        "喜悦": 3,
+        "期待": 2,
+        "焦虑": 5,
+        "不确定": 5,
+        "愤怒": 1,
+        "平静": 1
+      }
+    },
+    {
+      "platform": "x",
+      "season_year": 2022,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    },
+    {
+      "platform": "x",
+      "season_year": 2023,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    },
+    {
+      "platform": "x",
+      "season_year": 2024,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    },
+    {
+      "platform": "x",
+      "season_year": 2025,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    },
+    {
+      "platform": "x",
+      "season_year": 2026,
+      "target": 40,
+      "selected": 0,
+      "shortfall": 40,
+      "labelled": 0,
+      "relevant": 0,
+      "relevant_shortfall": 40,
+      "publication_date_count": 0,
+      "publication_dates": [],
+      "sentiments": {},
+      "topics": {},
+      "emotions": {}
+    }
+  ]
+}

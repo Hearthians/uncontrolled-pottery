@@ -1,0 +1,27 @@
+{
+  "integrity_check": [
+    "ok"
+  ],
+  "raw_post_counts": {
+    "workplace": 200,
+    "mastodon": 9,
+    "hackernews": 200
+  },
+  "eligible_post_counts": {
+    "hackernews": 200,
+    "mastodon": 9,
+    "workplace": 200
+  },
+  "selected": 409,
+  "labelled": 409,
+  "relevant": 382,
+  "duplicate_selected_ids": 0,
+  "selected_missing_author": 0,
+  "raw_record_versions": {
+    "bluesky": 0,
+    "hackernews": 200,
+    "mastodon": 9,
+    "reddit": 0,
+    "workplace": 400
+  }
+}
