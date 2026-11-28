@@ -1,0 +1,11 @@
+{
+  "country": "Japan",
+  "year": 2025,
+  "items": [
+    {"id": "Workplace monitoring", "score": 0.93},
+    {"id": "Creative ownership", "score": 0.51},
+    {"id": "Everyday assistance", "score": 0.08},
+    {"id": "Automated decisions", "score": 0.75},
+    {"id": "Learning tools", "score": 0.32}
+  ]
+}

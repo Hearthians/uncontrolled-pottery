@@ -1,0 +1,59 @@
+.nv-dim{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:14px 0 6px;
+}
+.nv-dim button{
+  border:1px solid var(--nv-rule,#cfc9bb);
+  background:transparent;
+  color:#353b31;
+  font:16px/1.15 Georgia,serif;
+  padding:8px 16px;
+  min-width:7.5rem;
+  text-align:left;
+  cursor:pointer;
+}
+.nv-dim button small{
+  display:block;
+  margin-top:3px;
+  font:10px/1.3 ui-monospace,Consolas,monospace;
+  color:#606459;
+}
+.nv-dim button[aria-pressed=true]{
+  background:#353b31;
+  color:#fff;
+  border-color:#353b31;
+}
+.nv-dim button[aria-pressed=true] small{color:#d9d4c8}
+.nv-dim-encode{margin:0 0 10px;color:#606459;font:11px/1.4 ui-monospace,Consolas,monospace}
+.nv-gallery{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:18px 16px;
+  padding:8px 0 28px;
+  border-bottom:1px solid var(--nv-rule,#cfc9bb);
+}
+.nv-year-card{min-width:0}
+.nv-year-card header{text-align:center;margin-bottom:6px}
+.nv-year-card h2{font:normal 28px/1.1 Georgia,serif;margin:0}
+.nv-year-card header p{margin:4px 0 0;color:#606459;font:11px/1.4 ui-monospace,Consolas,monospace}
+.nv-year-card[data-focus=true] h2{color:var(--clay,#a94f35)}
+.nv-scene-gallery{height:min(38vh,400px);background:#eee7dd}
+.nv-focus{max-width:1100px;margin:22px auto 0;padding:0 8px 12px}
+.nv-focus h2{font:normal 32px/1.1 Georgia,serif;margin:0 0 6px}
+.nv-focus-body{display:grid;grid-template-columns:minmax(240px,0.8fr) minmax(0,1.2fr);gap:24px;align-items:start}
+.nv-stack-legend{display:flex;flex-direction:column-reverse;gap:3px;margin:0;padding:0;list-style:none}
+.nv-stack-legend li{display:grid;grid-template-columns:3.5ch 1fr auto;gap:10px;align-items:center;padding:5px 8px;border:1px solid var(--nv-rule,#cfc9bb);font:11px/1.3 ui-monospace,Consolas,monospace}
+.nv-stack-legend li[data-state=empty]{opacity:.45}
+.nv-stack-legend li[data-state=active]{background:#eeece2}
+.nv-stack-legend b{font:15px/1 Georgia,serif}
+.nv-stack-legend i{display:inline-block;width:8px;height:8px;margin-right:6px}
+@media (max-width:1100px){
+  .nv-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nv-scene-gallery{height:min(42vh,420px)}
+}
+@media (max-width:640px){
+  .nv-gallery{grid-template-columns:1fr}
+  .nv-focus-body{grid-template-columns:1fr}
+}

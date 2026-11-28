@@ -1,0 +1,41 @@
+{
+  "name": "guardian-ai-vessels",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5178 --strictPort",
+    "sync-data": "rsync -a --delete ../data/vessels/ public/data/",
+    "prebuild": "npm run sync-data",
+    "predev": "npm run sync-data",
+    "sync-data-monthly": "mkdir -p public-monthly && rsync -a --delete ../data/vessels-monthly/ public-monthly/data/",
+    "build:monthly": "npm run sync-data-monthly && tsc --noEmit && vite build --config vite.monthly.config.ts && cp dist-monthly/monthly.html dist-monthly/index.html",
+    "sync-data-stacked": "mkdir -p public-stacked && rsync -a --delete ../data/vessels-monthly/ public-stacked/data/",
+    "build:stacked": "npm run sync-data-stacked && tsc --noEmit && vite build --config vite.stacked.config.ts && cp dist-stacked/stacked.html dist-stacked/index.html",
+    "sync-data-fluted": "mkdir -p public-fluted && rsync -a --delete ../data/vessels-monthly/ public-fluted/data/",
+    "build:fluted": "npm run sync-data-fluted && tsc --noEmit && vite build --config vite.fluted.config.ts && cp dist-fluted/fluted.html dist-fluted/index.html",
+    "sync-data-scroll": "mkdir -p public-scroll && rsync -a --delete ../data/vessels-monthly/ public-scroll/data/",
+    "build:scroll": "npm run sync-data-scroll && tsc --noEmit && vite build --config vite.scroll.config.ts && cp dist-scroll/scroll.html dist-scroll/index.html"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0"
+  },
+  "description": "Three-vessel annual preview of Guardian AI tag scores. New copy; does not modify Xiaojun's annual preview."
+}

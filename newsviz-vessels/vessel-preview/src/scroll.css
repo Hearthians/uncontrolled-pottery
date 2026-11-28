@@ -1,0 +1,111 @@
+:root {
+  color: #332d27;
+  background-color: #f6f3ed;
+  font: 1rem/1.4 system-ui, sans-serif;
+  scroll-snap-type: y proximity;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at 50% 48%, #fbf8f2, #f0e8dd 95%) fixed;
+}
+.vs-gallery {
+  --year-step: 55svh;
+  width: min(94%, 1180px);
+  margin-inline: auto;
+  padding-block: calc((100svh - var(--year-step)) / 2);
+}
+
+.vs-year {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+  height: var(--year-step);
+  scroll-snap-align: center;
+}
+.vs-card {
+  position: relative;
+  width: 100%;
+  opacity: var(--year-opacity, 0);
+  transform: scale(var(--year-scale, .68));
+}
+
+.vs-year h2 {
+  margin: 0 0 clamp(5px, 1.4svh, 14px);
+  color: #4e3c31;
+  text-align: center;
+  font: 400 clamp(2rem, min(7svh, 7vw), 5.5rem)/1 Georgia, serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -.035em;
+}
+.vs-vessels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(2px, 1vw, 16px);
+}
+.vs-vessels figure { margin: 0; }
+.vs-vessels figcaption {
+  color: #635247;
+  text-align: center;
+  font-size: clamp(.62rem, 1.25vw, .74rem);
+  letter-spacing: .07em;
+}
+
+.vs-piece {
+  position: relative;
+  height: min(48svh, 40vw, 31rem);
+}
+.vs-piece canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.vs-timeline {
+  position: fixed;
+  z-index: 1;
+  inset: 50% max(9px, 2vw) auto auto;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: grid;
+  justify-items: end;
+  gap: clamp(4px, 1svh, 10px);
+}
+.vs-timeline span {
+  width: 5px;
+  height: 1px;
+  background: #bcad9d;
+}
+.vs-timeline [data-current='true'] {
+  width: 14px;
+  background: #715342;
+}
+.vs-error, .vs-global-error {
+  color: #843f30;
+  font-size: .8rem;
+  margin: 6px 0;
+}
+.vs-card > .vs-error { position: absolute; inset: 100% 0 auto; text-align: center; }
+.vs-piece .vs-error { position: absolute; inset: auto 4px 2px; text-align: center; }
+.vs-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 650px) and (orientation: portrait) {
+  .vs-gallery { --year-step: 48svh; }
+  .vs-timeline { gap: clamp(3px, .8svh, 7px); }
+  .vs-timeline [data-current='true'] { width: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vs-card { transform: none; }
+}

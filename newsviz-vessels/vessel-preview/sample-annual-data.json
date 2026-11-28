@@ -1,0 +1,26 @@
+{
+  "country": "Synthetic Demo",
+  "year": 2025,
+  "items": [
+    {
+      "id": "Example E",
+      "score": 0.93
+    },
+    {
+      "id": "Example C",
+      "score": 0.51
+    },
+    {
+      "id": "Example A",
+      "score": 0.08
+    },
+    {
+      "id": "Example D",
+      "score": 0.75
+    },
+    {
+      "id": "Example B",
+      "score": 0.32
+    }
+  ]
+}

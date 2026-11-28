@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+vessel-preview/node_modules/
+vessel-preview/dist/
+vessel-preview/dist-monthly/
+vessel-preview/dist-stacked/
+vessel-preview/dist-fluted/
+vessel-preview/dist-scroll/
+vessel-preview/public/data/
+vessel-preview/public-monthly/data/
+vessel-preview/public-stacked/data/
+vessel-preview/public-fluted/data/
+vessel-preview/public-scroll/data/
+vessel-preview/*.tsbuildinfo

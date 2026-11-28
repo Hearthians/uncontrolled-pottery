@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "seed": 42,
+  "preview": {
+    "mode": "Manual",
+    "behaviour": "sagging"
+  },
+  "calibrationStatus": "visual-only",
+  "mappingRanges": {
+    "gaps": {
+      "low": {
+        "eventCount": 12,
+        "coverage": 15,
+        "amplitude": 1
+      },
+      "high": {
+        "eventCount": 12,
+        "coverage": 40,
+        "amplitude": 1
+      }
+    },
+    "buldges": {
+      "low": {
+        "eventCount": 12,
+        "coverage": 40,
+        "amplitude": 2
+      },
+      "high": {
+        "eventCount": 12,
+        "coverage": 40,
+        "amplitude": 3.5
+      }
+    },
+    "misalignment": {
+      "low": {
+        "eventCount": 8,
+        "coverage": 40,
+        "amplitude": 2.5
+      },
+      "high": {
+        "eventCount": 12,
+        "coverage": 40,
+        "amplitude": 5
+      }
+    },
+    "sagging": {
+      "low": {
+        "eventCount": 6,
+        "coverage": 40,
+        "amplitude": 3
+      },
+      "high": {
+        "eventCount": 6,
+        "coverage": 40,
+        "amplitude": 6.5
+      }
+    }
+  },
+  "manualPresets": {
+    "gaps": {
+      "eventCount": 12,
+      "coverage": 15,
+      "amplitude": 1
+    },
+    "buldges": {
+      "eventCount": 12,
+      "coverage": 40,
+      "amplitude": 2
+    },
+    "misalignment": {
+      "eventCount": 8,
+      "coverage": 40,
+      "amplitude": 2.5
+    },
+    "sagging": {
+      "eventCount": 6,
+      "coverage": 40,
+      "amplitude": 3
+    }
+  },
+  "patternSettings": {
+    "gaps": {
+      "phase": 0
+    },
+    "buldges": {
+      "phase": 0
+    },
+    "misalignment": {
+      "phase": 0
+    },
+    "sagging": {
+      "phase": 0,
+      "slack": 0.55,
+      "variation": 0.15
+    }
+  },
+  "simulationSettings": {
+    "maxDropMm": 16,
+    "coherenceLayers": 8
+  }
+}

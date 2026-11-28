@@ -1,0 +1,14 @@
+.nv-scene-tall{height:min(68vh,560px)}
+.nv-modes{display:flex;flex-wrap:wrap;gap:0;margin-top:14px;border:1px solid var(--nv-rule,#cfc9bb);width:fit-content}
+.nv-modes button{border:0;background:transparent;padding:8px 13px;font:12px/1.3 ui-monospace,Consolas,monospace;cursor:pointer}
+.nv-modes button[aria-selected=true]{background:#353b31;color:#fff}
+.nv-months{list-style:none;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;padding:0;margin:14px 0 0}
+.nv-months li{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border:1px solid var(--nv-rule,#cfc9bb);font:10px/1.3 ui-monospace,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em}
+.nv-months li[data-state=empty]{opacity:.45}
+.nv-months li[data-state=unobserved]{opacity:.35;background:repeating-linear-gradient(-45deg,#0000 0 4px,#0001 4px 6px)}
+.nv-months li[data-state=sparse]{box-shadow:inset 0 -2px #aa8435}
+.nv-months b{font:16px/1 Georgia,serif;letter-spacing:0;text-transform:none}
+@media (max-width:900px){
+  .nv-months{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .nv-scene-tall{height:440px}
+}

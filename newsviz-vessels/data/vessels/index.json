@@ -1,0 +1,250 @@
+{
+  "corpus": "tag",
+  "tag": "technology/artificialintelligenceai",
+  "from": 2005,
+  "to": 2026,
+  "articleCount": 5676,
+  "maxItems": 97,
+  "scorer": "local:qwen3:4b-instruct-2507-q4_K_M:ordinal-v1:1536:framing:aeb13307a71a",
+  "dimensions": [
+    {
+      "id": "valence",
+      "label": "Valence",
+      "country": "Guardian · valence",
+      "scale": "inverted (1 − v) / 2; higher = more negative"
+    },
+    {
+      "id": "alarmist",
+      "label": "Alarmist",
+      "country": "Guardian · alarmist",
+      "scale": "0–1; higher = more alarmist"
+    },
+    {
+      "id": "angry",
+      "label": "Angry",
+      "country": "Guardian · angry",
+      "scale": "0–1; higher = more angry"
+    }
+  ],
+  "years": [
+    {
+      "year": 2005,
+      "articleCount": 1,
+      "itemCounts": {
+        "valence": 1,
+        "alarmist": 1,
+        "angry": 1
+      },
+      "sampled": false
+    },
+    {
+      "year": 2007,
+      "articleCount": 1,
+      "itemCounts": {
+        "valence": 1,
+        "alarmist": 1,
+        "angry": 1
+      },
+      "sampled": false
+    },
+    {
+      "year": 2008,
+      "articleCount": 29,
+      "itemCounts": {
+        "valence": 29,
+        "alarmist": 29,
+        "angry": 29
+      },
+      "sampled": false
+    },
+    {
+      "year": 2009,
+      "articleCount": 22,
+      "itemCounts": {
+        "valence": 22,
+        "alarmist": 22,
+        "angry": 22
+      },
+      "sampled": false
+    },
+    {
+      "year": 2010,
+      "articleCount": 9,
+      "itemCounts": {
+        "valence": 9,
+        "alarmist": 9,
+        "angry": 9
+      },
+      "sampled": false
+    },
+    {
+      "year": 2011,
+      "articleCount": 11,
+      "itemCounts": {
+        "valence": 11,
+        "alarmist": 11,
+        "angry": 11
+      },
+      "sampled": false
+    },
+    {
+      "year": 2012,
+      "articleCount": 15,
+      "itemCounts": {
+        "valence": 15,
+        "alarmist": 15,
+        "angry": 15
+      },
+      "sampled": false
+    },
+    {
+      "year": 2013,
+      "articleCount": 13,
+      "itemCounts": {
+        "valence": 13,
+        "alarmist": 13,
+        "angry": 13
+      },
+      "sampled": false
+    },
+    {
+      "year": 2014,
+      "articleCount": 66,
+      "itemCounts": {
+        "valence": 66,
+        "alarmist": 66,
+        "angry": 66
+      },
+      "sampled": false
+    },
+    {
+      "year": 2015,
+      "articleCount": 101,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2016,
+      "articleCount": 204,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2017,
+      "articleCount": 187,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2018,
+      "articleCount": 190,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2019,
+      "articleCount": 141,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2020,
+      "articleCount": 86,
+      "itemCounts": {
+        "valence": 86,
+        "alarmist": 86,
+        "angry": 86
+      },
+      "sampled": false
+    },
+    {
+      "year": 2021,
+      "articleCount": 110,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2022,
+      "articleCount": 119,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2023,
+      "articleCount": 751,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2024,
+      "articleCount": 709,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2025,
+      "articleCount": 1128,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    },
+    {
+      "year": 2026,
+      "articleCount": 1783,
+      "itemCounts": {
+        "valence": 97,
+        "alarmist": 97,
+        "angry": 97
+      },
+      "sampled": true
+    }
+  ],
+  "missingScores": {
+    "valence": 0,
+    "alarmist": 0,
+    "angry": 0
+  },
+  "notes": {
+    "valence": "Stored valence is −1..+1; the vessel score is (1 − v) / 2 so higher is more negative.",
+    "sampling": "Years with more than 97 articles keep 97 evenly spaced quantiles of that dimension's score, independently."
+  }
+}

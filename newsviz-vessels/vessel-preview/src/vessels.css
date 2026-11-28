@@ -1,0 +1,38 @@
+.vessels{--nv-rule:var(--rule,#cfc9bb)}
+.vessels .mx-intro{padding-block:36px 20px}
+.vessels .mx-intro p{color:#606459;line-height:1.55;max-width:62ch}
+.vessels .mx-intro code{font:12px/1.4 ui-monospace,Consolas,monospace}
+.nv-kicker,.nv-origin,.nv-meta,.nv-hint,.nv-caption,.nv-year-ticks button{
+  font:10px/1.5 ui-monospace,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase
+}
+.nv-origin{text-align:right;color:var(--clay,#a94f35)}
+.nv-origin span{color:var(--sub,#62695f)}
+.nv-year{padding:8px 0 22px;border-block:1px solid var(--nv-rule)}
+.nv-year label{display:grid;grid-template-columns:auto auto 1fr;gap:14px;align-items:center}
+.nv-year strong{font:32px/1 Georgia,serif}
+.nv-year input[type=range]{width:100%;accent-color:var(--clay,#a94f35)}
+.nv-year-ticks{display:flex;flex-wrap:wrap;gap:2px;margin-top:8px}
+.nv-year-ticks button{border:0;background:transparent;color:#62695f;padding:4px 3px;min-width:2.2ch;cursor:pointer}
+.nv-year-ticks button[aria-pressed=true]{background:#353b31;color:#fff}
+.nv-year-ticks button[data-empty=true]{opacity:.35;text-decoration:line-through}
+.nv-caption,.nv-status,.nv-error{margin:10px 0 0;color:#606459;text-transform:none;letter-spacing:0;font:15px/1.5 Georgia,serif}
+.nv-error{color:#9a332b}
+.nv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-bottom:1px solid var(--nv-rule)}
+.nv-column{min-width:0;padding:16px 14px 20px;border-right:1px solid var(--nv-rule)}
+.nv-column:last-child{border-right:0}
+.nv-column-head h2{font:normal 28px/1.1 Georgia,serif;margin:4px 0 8px}
+.nv-column-head p{margin:0 0 8px;color:#606459;line-height:1.45}
+.nv-meta,.nv-hint{color:#62695f;text-transform:none;letter-spacing:0;font-size:11px}
+.nv-scene{position:relative;height:min(62vh,520px);background:#eee7dd}
+.nv-scene canvas{display:block;width:100%;height:100%}
+.nv-inspect{margin-top:12px;padding:10px 0 0;border-top:1px solid var(--nv-rule)}
+.nv-inspect a{display:block;font:18px/1.3 Georgia,serif;color:inherit;margin:6px 0}
+.nv-inspect p{margin:0;color:#606459}
+.vessels footer{padding:18px 0 8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:11px/1.4 ui-monospace,Consolas,monospace;color:#62695f}
+@media (max-width:900px){
+  .nv-grid{grid-template-columns:1fr}
+  .nv-column{border-right:0;border-bottom:1px solid var(--nv-rule)}
+  .nv-origin{text-align:left;margin-top:14px}
+  .vessels .mx-intro{display:block}
+  .nv-scene{height:420px}
+}

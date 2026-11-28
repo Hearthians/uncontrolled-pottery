@@ -1,0 +1,6 @@
+{
+  "gaps":         {"minEvents": 5, "maxEvents": 9, "minIntensity": 0.25, "maxIntensity": 1},
+  "buldges":      {"minEvents": 2, "maxEvents": 6, "minIntensity": 0.30, "maxIntensity": 1},
+  "misalignment": {"minEvents": 2, "maxEvents": 5, "minIntensity": 0.25, "maxIntensity": 1},
+  "sagging":      {"minEvents": 3, "maxEvents": 6, "minIntensity": 0.30, "maxIntensity": 1}
+}
